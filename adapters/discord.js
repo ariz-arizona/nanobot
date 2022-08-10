@@ -6,9 +6,27 @@ const {
   verifyKey,
   InteractionResponseFlags,
 } = require("discord-interactions");
+const { google } = require("googleapis");
+
 const { errorMessage } = require("../helpers");
 
 const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY } = process.env;
+const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
+
+const getUsers = async (id) => {
+  const sheets = google.sheets({
+    version: "v4",
+    auth: GOOGLE_API_KEY,
+  });
+  const res = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    includeGridData: true,
+    ranges: "A4:B50",
+  });
+  const data = res.data.sheets[0].data[0].rowData;
+  const values = data[id].values.map((el) => el.formattedValue);
+  return values;
+};
 
 router.post("/discord", async (_req, res) => {
   const signature = _req.headers["x-signature-ed25519"];
@@ -37,8 +55,32 @@ router.post("/discord", async (_req, res) => {
   ) {
     try {
       const command = message.data.name || message.data.custom_id;
-      console.log(`Получена команда ${command}`)
+      const options = {};
+      if (message.data.options) {
+        message.data.options.map((el) => {
+          options[el.name] = el.value;
+        });
+      }
+      console.log(`Получена команда ${command}`);
       switch (command) {
+        case "stat":
+          const userId =
+            options.id && !isNaN(parseInt(options.id))
+              ? parseInt(options.id)
+              : 0;
+          const data = await getUsers(userId);
+          const text =
+            data.length > 1
+              ? [`Пользователь: ${data[0]}`, `Цель: ${data[1]}`]
+              : ["Sorry"];
+          res.status(200).send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: InteractionResponseFlags.EPHEMERAL,
+              content: text.join("\n"),
+            },
+          });
+          break;
         default:
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
