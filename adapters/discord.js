@@ -48,7 +48,7 @@ const getStat = async (id) => {
   return values;
 };
 
-const getAdd = async (username) => {
+const getFreeDates = async (username) => {
   const sheets = google.sheets({
     version: "v4",
     auth: GOOGLE_API_KEY,
@@ -56,11 +56,32 @@ const getAdd = async (username) => {
   const res = await sheets.spreadsheets.get({
     spreadsheetId: SPREADSHEET_ID,
     includeGridData: true,
-    ranges: "A1:AB60",
+    ranges: "A1:AF60",
   });
 
   const data = res.data.sheets[0].data[0].rowData;
-  console.log(data);
+
+  const findIndex = data.findIndex((el) => {
+    return el.values[0].formattedValue === username;
+  });
+
+  if (!findIndex) {
+    return new Error("user not found");
+  }
+
+  const freeDates = [];
+  data[findIndex].values.map((el, i) => {
+    const date = data[0].values[i].formattedValue;
+    const target = data[findIndex].values[i].formattedValue;
+    if (i > 0 && !target) {
+      freeDates.push({
+        value: i,
+        label: date,
+      });
+    }
+  });
+
+  return freeDates;
 };
 
 router.post("/bot_stat", async (_req, res) => {
@@ -91,6 +112,82 @@ router.post("/bot_stat", async (_req, res) => {
       method: "POST",
       body: JSON.stringify({
         content: text.join("\n"),
+      }),
+    }
+  );
+
+  res.sendStatus(200);
+});
+
+router.post("/bot_add", async (_req, res) => {
+  const message = _req.body;
+  const { token, words, username } = message;
+
+  const freeDates = await getFreeDates(username);
+  freeDates[0].focused = true;
+  freeDates.map((el) => (el.value = [el.value, words].join("_")));
+
+  await fetch(
+    `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
+    {
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+      body: JSON.stringify({
+        content: `Пользователь ${username} готов вписать слова (${words}) в дату`,
+        components: [
+          {
+            type: 1,
+            components: [
+              {
+                type: 3,
+                custom_id: "free_date",
+                options: freeDates,
+                min_values: 1,
+                max_values: 1,
+                autocomplete: true,
+              },
+            ],
+          },
+        ],
+      }),
+    }
+  );
+
+  res.sendStatus(200);
+});
+
+router.post("/bot_add_two", async (_req, res) => {
+  const message = _req.body;
+  const { token, date, words, username } = message;
+
+  console.log(date, words, username);
+
+  const sheets = google.sheets({
+    version: "v4",
+    auth: GOOGLE_API_KEY,
+  });
+
+  const t = await sheets.spreadsheets.batchUpdate({
+    auth: GOOGLE_API_KEY,
+    spreadsheetId: SPREADSHEET_ID,
+    resource: {
+      valueInputOption: "RAW",
+      data: [
+        {
+          range: "Sheet1!A57", // Update single cell
+          values: [["A57"]],
+        },
+      ],
+    },
+  });
+
+  await fetch(
+    `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
+    {
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+      body: JSON.stringify({
+        content: `Ячейка обновлена`,
       }),
     }
   );
@@ -131,6 +228,9 @@ router.post("/discord", async (_req, res) => {
           options[el.name] = el.value;
         });
       }
+      if (message.data.custom_id) {
+        options[message.data.custom_id] = message.data.values;
+      }
       const user = message.guild_id ? message.member.user : message.user;
       const { token } = message;
       console.log(`Получена команда ${command}`);
@@ -146,7 +246,7 @@ router.post("/discord", async (_req, res) => {
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ userId, token }),
+            body: JSON.stringify({ token, userId }),
           });
 
           await new Promise((resolve) => setTimeout(resolve, 200));
@@ -161,7 +261,51 @@ router.post("/discord", async (_req, res) => {
 
           break;
         case "add":
-          // const data = await getStat(user.username);
+          fetch(`${getPath(_req)}/bot_add`, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token,
+              username: user.username,
+              words: options.words,
+            }),
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 200));
+
+          res.status(200).send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Начинаю искать пользователя`,
+            },
+          });
+          break;
+        case "free_date":
+          fetch(`${getPath(_req)}/bot_add_two`, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token,
+              username: user.username,
+              date: options.free_date[0].split("_")[0],
+              words: options.free_date[0].split("_")[1],
+            }),
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 200));
+
+          res.status(200).send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Начинаю добавлять данные`,
+            },
+          });
           break;
         default:
           res.status(200).send({
