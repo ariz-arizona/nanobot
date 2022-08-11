@@ -27,4 +27,10 @@ const errorMessage = (error) => {
   return msg;
 };
 
-module.exports = { loadPage, errorMessage };
+const getPath = (_req) => {
+  return `http${_req.headers.host.indexOf("localhost") !== -1 ? "" : "s"}://${
+    _req.headers.host
+  }`;
+};
+
+module.exports = { loadPage, errorMessage, getPath };

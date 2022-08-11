@@ -8,7 +8,7 @@ const {
 } = require("discord-interactions");
 const { google } = require("googleapis");
 
-const { errorMessage } = require("../helpers");
+const { errorMessage, getPath } = require("../helpers");
 
 const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY } = process.env;
 const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
@@ -21,7 +21,7 @@ const getStat = async (id) => {
   const res = await sheets.spreadsheets.get({
     spreadsheetId: SPREADSHEET_ID,
     includeGridData: true,
-    ranges: "A4:M50",
+    ranges: "A3:AI60",
   });
 
   const data = res.data.sheets[0].data[0].rowData;
@@ -34,7 +34,6 @@ const getStat = async (id) => {
   }
 
   if (typeof id === "string") {
-    // id = "hisaribi";
     const findIndex = data.findIndex((el) => {
       return el.values[0].formattedValue === id;
     });
@@ -44,9 +43,60 @@ const getStat = async (id) => {
   if (!data[selectedId] || !data[selectedId].values[0].formattedValue) {
     return new Error("user not found");
   }
+
   const values = data[selectedId].values.map((el) => el.formattedValue);
   return values;
 };
+
+const getAdd = async (username) => {
+  const sheets = google.sheets({
+    version: "v4",
+    auth: GOOGLE_API_KEY,
+  });
+  const res = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    includeGridData: true,
+    ranges: "A1:AB60",
+  });
+
+  const data = res.data.sheets[0].data[0].rowData;
+  console.log(data);
+};
+
+router.post("/bot_stat", async (_req, res) => {
+  const message = _req.body;
+  const { token, userId } = message;
+
+  const data = await getStat(userId);
+  const text =
+    data.length > 1
+      ? [
+          `Запрос от пользователя: ${userId}`,
+          `Пользователь: ${data[0]}`,
+          `Цель: ${data[1]}`,
+          `Среднее: ${data[data.length - 3]}`,
+          `Общее: ${data[data.length - 2]}`,
+          `Остаток до цели: ${data[data.length - 1]}`,
+        ]
+      : [
+          `Ничего не найдено для ${
+            typeof userId === "number" ? `айди ` : `пользователя`
+          } ${userId}`,
+        ];
+
+  await fetch(
+    `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
+    {
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+      body: JSON.stringify({
+        content: text.join("\n"),
+      }),
+    }
+  );
+
+  res.sendStatus(200);
+});
 
 router.post("/discord", async (_req, res) => {
   const signature = _req.headers["x-signature-ed25519"];
@@ -82,6 +132,7 @@ router.post("/discord", async (_req, res) => {
         });
       }
       const user = message.guild_id ? message.member.user : message.user;
+      const { token } = message;
       console.log(`Получена команда ${command}`);
       switch (command) {
         case "stat":
@@ -89,25 +140,28 @@ router.post("/discord", async (_req, res) => {
             options.id && !isNaN(parseInt(options.id))
               ? parseInt(options.id)
               : user.username;
-              
-          const data = await getStat(userId);
-          const text =
-            data.length > 1
-              ? [
-                  `Запрос от пользователя: ${user.username}`,
-                  `Пользователь: ${data[0]}`,
-                  `Цель: ${data[1]}`,
-                  `Среднее: ${data[data.length - 3]}`,
-                  `Общее: ${data[data.length - 2]}`,
-                  `Остаток до цели: ${data[data.length - 1]}`,
-                ]
-              : [`Ничего не найдено для ${options.id ? `айди ${options.id}` : `пользователя ${user.username}`}`];
+
+          fetch(`${getPath(_req)}/bot_stat`, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ userId, token }),
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 200));
+
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: text.join("\n"),
+              flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Начинаю искать статистику`,
             },
           });
+
+          break;
+        case "add":
+          // const data = await getStat(user.username);
           break;
         default:
           res.status(200).send({
