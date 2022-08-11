@@ -13,7 +13,7 @@ const { errorMessage } = require("../helpers");
 const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY } = process.env;
 const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
 
-const getUsers = async (id) => {
+const getStat = async (id) => {
   const sheets = google.sheets({
     version: "v4",
     auth: GOOGLE_API_KEY,
@@ -23,8 +23,28 @@ const getUsers = async (id) => {
     includeGridData: true,
     ranges: "A4:M50",
   });
+
   const data = res.data.sheets[0].data[0].rowData;
-  const values = data[id].values.map((el) => el.formattedValue);
+
+  let selectedId = id;
+
+  if (typeof id === "number") {
+    if (id < 0) id = 0;
+    if (id > 50) id = 50;
+  }
+
+  if (typeof id === "string") {
+    // id = "hisaribi";
+    const findIndex = data.findIndex((el) => {
+      return el.values[0].formattedValue === id;
+    });
+    if (findIndex) selectedId = findIndex;
+  }
+
+  if (!data[selectedId] || !data[selectedId].values[0].formattedValue) {
+    return new Error("user not found");
+  }
+  const values = data[selectedId].values.map((el) => el.formattedValue);
   return values;
 };
 
@@ -61,24 +81,27 @@ router.post("/discord", async (_req, res) => {
           options[el.name] = el.value;
         });
       }
+      const user = message.guild_id ? message.member.user : message.user;
       console.log(`Получена команда ${command}`);
       switch (command) {
         case "stat":
           const userId =
             options.id && !isNaN(parseInt(options.id))
               ? parseInt(options.id)
-              : 0;
-          const data = await getUsers(userId);
+              : user.username;
+              
+          const data = await getStat(userId);
           const text =
             data.length > 1
               ? [
+                  `Запрос от пользователя: ${user.username}`,
                   `Пользователь: ${data[0]}`,
                   `Цель: ${data[1]}`,
                   `Среднее: ${data[data.length - 3]}`,
                   `Общее: ${data[data.length - 2]}`,
                   `Остаток до цели: ${data[data.length - 1]}`,
                 ]
-              : ["Sorry"];
+              : [`Ничего не найдено для ${options.id ? `айди ${options.id}` : `пользователя ${user.username}`}`];
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
