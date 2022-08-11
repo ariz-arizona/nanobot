@@ -21,7 +21,7 @@ const getUsers = async (id) => {
   const res = await sheets.spreadsheets.get({
     spreadsheetId: SPREADSHEET_ID,
     includeGridData: true,
-    ranges: "A4:B50",
+    ranges: "A4:M50",
   });
   const data = res.data.sheets[0].data[0].rowData;
   const values = data[id].values.map((el) => el.formattedValue);
@@ -71,12 +71,17 @@ router.post("/discord", async (_req, res) => {
           const data = await getUsers(userId);
           const text =
             data.length > 1
-              ? [`Пользователь: ${data[0]}`, `Цель: ${data[1]}`]
+              ? [
+                  `Пользователь: ${data[0]}`,
+                  `Цель: ${data[1]}`,
+                  `Среднее: ${data[data.length - 3]}`,
+                  `Общее: ${data[data.length - 2]}`,
+                  `Остаток до цели: ${data[data.length - 1]}`,
+                ]
               : ["Sorry"];
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              flags: InteractionResponseFlags.EPHEMERAL,
               content: text.join("\n"),
             },
           });
