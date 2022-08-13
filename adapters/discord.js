@@ -8,7 +8,7 @@ const {
 } = require("discord-interactions");
 const { google } = require("googleapis");
 
-const { errorMessage, getPath, auth } = require("../helpers");
+const { errorMessage, getPath, auth, rows } = require("../helpers");
 
 const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY } = process.env;
 const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
@@ -74,8 +74,9 @@ const getFreeDates = async (username) => {
     const date = data[0].values[i].formattedValue;
     const target = data[findIndex].values[i].formattedValue;
     if (i > 0 && !target) {
+      // console.log({i, date, v: `${rows[i]}${findIndex + 1}`})
       freeDates.push({
-        value: i,
+        value: `${rows[i]}${findIndex + 1}`,
         label: date,
       });
     }
@@ -172,9 +173,9 @@ router.post("/bot_add_two", async (_req, res) => {
   sheets.spreadsheets.values.update({
     auth: jwt,
     spreadsheetId: SPREADSHEET_ID,
-    range: "Список участников!A57",
+    range: `Список участников!${date}`,
     valueInputOption: "USER_ENTERED",
-    resource: {values: [["A57"]],}
+    resource: { values: [[words]] },
   });
 
   await fetch(
