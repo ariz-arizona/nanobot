@@ -8,7 +8,7 @@ const {
 } = require("discord-interactions");
 const { google } = require("googleapis");
 
-const { errorMessage, getPath } = require("../helpers");
+const { errorMessage, getPath, auth } = require("../helpers");
 
 const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY } = process.env;
 const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
@@ -167,18 +167,14 @@ router.post("/bot_add_two", async (_req, res) => {
     auth: GOOGLE_API_KEY,
   });
 
-  const t = await sheets.spreadsheets.batchUpdate({
-    auth: GOOGLE_API_KEY,
+  const jwt = await auth();
+
+  sheets.spreadsheets.values.update({
+    auth: jwt,
     spreadsheetId: SPREADSHEET_ID,
-    resource: {
-      valueInputOption: "RAW",
-      data: [
-        {
-          range: "Sheet1!A57", // Update single cell
-          values: [["A57"]],
-        },
-      ],
-    },
+    range: "Список участников!A57",
+    valueInputOption: "USER_ENTERED",
+    resource: {values: [["A57"]],}
   });
 
   await fetch(

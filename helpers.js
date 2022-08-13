@@ -1,3 +1,6 @@
+const { google } = require("googleapis");
+const privatekey = require("./privatekey.json");
+
 const loadPage = async (url) => {
   if (!url) {
     return false;
@@ -33,4 +36,23 @@ const getPath = (_req) => {
   }`;
 };
 
-module.exports = { loadPage, errorMessage, getPath };
+const auth = async () => {
+  // configure a JWT auth client
+  let jwtClient = new google.auth.JWT(
+    privatekey.client_email,
+    null,
+    privatekey.private_key,
+    [
+      "https://www.googleapis.com/auth/drive",
+      "https://www.googleapis.com/auth/drive.file",
+      "https://www.googleapis.com/auth/spreadsheets",
+    ]
+  );
+
+  //authenticate request
+  await jwtClient.authorize();
+
+  return jwtClient;
+};
+
+module.exports = { loadPage, errorMessage, getPath, auth };
