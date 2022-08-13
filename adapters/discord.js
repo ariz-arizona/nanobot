@@ -161,7 +161,7 @@ router.post("/bot_add_two", async (_req, res) => {
   const message = _req.body;
   const { token, date, words, username } = message;
 
-  console.log(date, words, username);
+  // console.log(date, words, username);
 
   const sheets = google.sheets({
     version: "v4",
