@@ -14,75 +14,83 @@ const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY } = process.env;
 const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
 
 const getStat = async (id) => {
-  const sheets = google.sheets({
-    version: "v4",
-    auth: GOOGLE_API_KEY,
-  });
-  const res = await sheets.spreadsheets.get({
-    spreadsheetId: SPREADSHEET_ID,
-    includeGridData: true,
-    ranges: "A3:AI60",
-  });
-
-  const data = res.data.sheets[0].data[0].rowData;
-
-  let selectedId = id;
-
-  if (typeof id === "number") {
-    if (id < 0) id = 0;
-    if (id > 50) id = 50;
-  }
-
-  if (typeof id === "string") {
-    const findIndex = data.findIndex((el) => {
-      return el.values[0].formattedValue === id;
+  try {
+    const sheets = google.sheets({
+      version: "v4",
+      auth: GOOGLE_API_KEY,
     });
-    if (findIndex) selectedId = findIndex;
-  }
+    const res = await sheets.spreadsheets.get({
+      spreadsheetId: SPREADSHEET_ID,
+      includeGridData: true,
+      ranges: "A3:AI60",
+    });
 
-  if (!data[selectedId] || !data[selectedId].values[0].formattedValue) {
-    return new Error("user not found");
-  }
+    const data = res.data.sheets[0].data[0].rowData;
 
-  const values = data[selectedId].values.map((el) => el.formattedValue);
-  return values;
+    let selectedId = id;
+
+    if (typeof id === "number") {
+      if (id < 0) id = 0;
+      if (id > 50) id = 50;
+    }
+
+    if (typeof id === "string") {
+      const findIndex = data.findIndex((el) => {
+        return el.values[0].formattedValue === id;
+      });
+      if (findIndex) selectedId = findIndex;
+    }
+
+    if (!data[selectedId] || !data[selectedId].values[0].formattedValue) {
+      return new Error("user not found");
+    }
+
+    const values = data[selectedId].values.map((el) => el.formattedValue);
+    return values;
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 const getFreeDates = async (username) => {
-  const sheets = google.sheets({
-    version: "v4",
-    auth: GOOGLE_API_KEY,
-  });
-  const res = await sheets.spreadsheets.get({
-    spreadsheetId: SPREADSHEET_ID,
-    includeGridData: true,
-    ranges: "A1:AF60",
-  });
+  try {
+    const sheets = google.sheets({
+      version: "v4",
+      auth: GOOGLE_API_KEY,
+    });
+    const res = await sheets.spreadsheets.get({
+      spreadsheetId: SPREADSHEET_ID,
+      includeGridData: true,
+      ranges: "A1:AF60",
+    });
 
-  const data = res.data.sheets[0].data[0].rowData;
+    const data = res.data.sheets[0].data[0].rowData;
 
-  const findIndex = data.findIndex((el) => {
-    return el.values[0].formattedValue === username;
-  });
+    const findIndex = data.findIndex((el) => {
+      return el.values[0].formattedValue === username;
+    });
 
-  if (!findIndex) {
-    return new Error("user not found");
-  }
-
-  const freeDates = [];
-  data[findIndex].values.map((el, i) => {
-    const date = data[0].values[i].formattedValue;
-    const target = data[findIndex].values[i].formattedValue;
-    if (i > 0 && !target) {
-      // console.log({i, date, v: `${rows[i]}${findIndex + 1}`})
-      freeDates.push({
-        value: `${rows[i]}${findIndex + 1}`,
-        label: date,
-      });
+    if (!findIndex) {
+      return new Error("user not found");
     }
-  });
 
-  return freeDates;
+    const freeDates = [];
+    data[findIndex].values.map((el, i) => {
+      const date = data[0].values[i].formattedValue;
+      const target = data[findIndex].values[i].formattedValue;
+      if (i > 0 && !target) {
+        // console.log({i, date, v: `${rows[i]}${findIndex + 1}`})
+        freeDates.push({
+          value: `${rows[i]}${findIndex + 1}`,
+          label: date,
+        });
+      }
+    });
+
+    return freeDates;
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 router.post("/bot_stat", async (_req, res) => {
