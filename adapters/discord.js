@@ -102,18 +102,17 @@ router.post("/bot_stat", async (_req, res) => {
     const text =
       data.length > 1
         ? [
-            `Запрос от пользователя: ${userId}`,
-            `Пользователь: ${data[0]}`,
-            `Цель: ${data[1]}`,
-            `Среднее: ${data[data.length - 3]}`,
-            `Общее: ${data[data.length - 2]}`,
-            `Остаток до цели: ${data[data.length - 1]}`,
-          ]
+          `Запрос от пользователя: ${userId}`,
+          `Пользователь: ${data[0]}`,
+          `Цель: ${data[1]}`,
+          `Среднее: ${data[data.length - 3]}`,
+          `Общее: ${data[data.length - 2]}`,
+          `Остаток до цели: ${data[data.length - 1]}`,
+        ]
         : [
-            `Ничего не найдено для ${
-              typeof userId === "number" ? `айди ` : `пользователя`
-            } ${userId}`,
-          ];
+          `Ничего не найдено для ${typeof userId === "number" ? `айди ` : `пользователя`
+          } ${userId}`,
+        ];
 
     await fetch(
       `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
@@ -149,7 +148,7 @@ router.post("/bot_add", async (_req, res) => {
     // freeDates[0].default = true;
     freeDates.map((el) => (el.value = [el.value, words].join("_")));
     await fetch(
-      `https://discord.com/api/v10/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
+      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
       {
         headers: { "Content-Type": "application/json" },
         method: "POST",
@@ -192,7 +191,31 @@ router.post("/bot_add", async (_req, res) => {
 router.post("/bot_add_two", async (_req, res) => {
   try {
     const message = _req.body;
-    const { token, date, words, username } = message;
+    const { messageData, token, date, words, username } = message;
+    await fetch(
+      `https://discord.com/api/v8/webhooks/${messageData.webhook_id}/${token}/messages/${messageData.id}`,
+      {
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+        body: JSON.stringify({
+          flags: InteractionResponseFlags.EPHEMERAL,
+          content: `Пользователь ${username} готов вписать слова (${words}) в дату`,
+          components: [
+            {
+              type: 1,
+              components: [
+                {
+                  type: 3,
+                  custom_id: "free_date",
+                  options: [{ value: date, label: date, default: true }],
+                  disabled: true
+                },
+              ],
+            },
+          ],
+        }),
+      }
+    );
 
     // console.log(date, words, username);
 
@@ -332,6 +355,7 @@ router.post("/discord", async (_req, res) => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
+              messageData: message.message,
               token,
               username: user.username,
               date: options.free_date[0].split("_")[0],
