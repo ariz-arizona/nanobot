@@ -145,17 +145,16 @@ router.post("/bot_add", async (_req, res) => {
   try {
     const message = _req.body;
     const { token, words, username } = message;
-
     const freeDates = await getFreeDates(username);
-    freeDates[0].focused = true;
+    // freeDates[0].default = true;
     freeDates.map((el) => (el.value = [el.value, words].join("_")));
-
     await fetch(
-      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
+      `https://discord.com/api/v10/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
       {
         headers: { "Content-Type": "application/json" },
         method: "POST",
         body: JSON.stringify({
+          flags: InteractionResponseFlags.EPHEMERAL,
           content: `Пользователь ${username} готов вписать слова (${words}) в дату`,
           components: [
             {
@@ -164,10 +163,9 @@ router.post("/bot_add", async (_req, res) => {
                 {
                   type: 3,
                   custom_id: "free_date",
-                  options: freeDates,
+                  options: freeDates.slice(0, 24),
                   min_values: 1,
-                  max_values: 1,
-                  autocomplete: true,
+                  max_values: 1
                 },
               ],
             },
@@ -219,7 +217,7 @@ router.post("/bot_add_two", async (_req, res) => {
         headers: { "Content-Type": "application/json" },
         method: "POST",
         body: JSON.stringify({
-          content: `Ячейка обновлена`,
+          content: `Ячейка ${date} обновлена\nПользователь: ${username}\nСлов: ${words}`,
         }),
       }
     );
