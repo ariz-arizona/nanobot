@@ -146,7 +146,7 @@ router.post("/bot_add", async (_req, res) => {
     const { token, words, username } = message;
     const freeDates = await getFreeDates(username);
     freeDates.map((el) => (el.value = [el.value, words].join("_")));
-    freeDates[0].default = true;
+    // freeDates[0].default = true;
     await fetch(
       `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
       {
