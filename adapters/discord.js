@@ -64,6 +64,7 @@ const getFreeDates = async (username) => {
       ranges: "A1:AF60",
     });
 
+    const currentDay = (new Date()).getDate();
     const data = res.data.sheets[0].data[0].rowData;
 
     const findIndex = data.findIndex((el) => {
@@ -78,11 +79,13 @@ const getFreeDates = async (username) => {
     data[findIndex].values.map((el, i) => {
       const date = data[0].values[i].formattedValue;
       const target = data[findIndex].values[i].formattedValue;
-      if (i > 0 && !target) {
+      const condition = parseInt(date) === currentDay || parseInt(date) === (currentDay - 1);
+      if (i > 0 && !target && condition) {
         // console.log({i, date, v: `${rows[i]}${findIndex + 1}`})
         freeDates.push({
           value: `${rows[i]}${findIndex + 1}`,
           label: date,
+          style: parseInt(date) === currentDay ? 1 : 2
         });
       }
     });
@@ -94,8 +97,8 @@ const getFreeDates = async (username) => {
 };
 
 router.post("/bot_stat", async (_req, res) => {
+  const message = _req.body;
   try {
-    const message = _req.body;
     const { token, userId } = message;
 
     const data = await getStat(userId);
@@ -141,11 +144,35 @@ router.post("/bot_stat", async (_req, res) => {
 });
 
 router.post("/bot_add", async (_req, res) => {
+  const message = _req.body;
   try {
-    const message = _req.body;
     const { token, words, username } = message;
+
     const freeDates = await getFreeDates(username);
     freeDates.map((el) => (el.value = [el.value, words].join("_")));
+
+    const buttons = [];
+    if (freeDates[0]) {
+      buttons.push({
+        type: 2,
+        style: freeDates[0].style,
+        label: freeDates[0].label,
+        custom_id: `free_date_${freeDates[0].value}`,
+      });
+    }
+    if (freeDates[1]) {
+      buttons.push({
+        type: 2,
+        style: freeDates[1].style,
+        label: freeDates[1].label,
+        custom_id: `free_date_${freeDates[1].value}`,
+      });
+    }
+
+    const txt = buttons.length ?
+      `(У бота сегодня ${(new Date()).getDate()} день)\nПользователь ${username} готов вписать слова (${words}) в дату:` :
+      'Свободных дат не найдено';
+    
     await fetch(
       `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
       {
@@ -153,26 +180,13 @@ router.post("/bot_add", async (_req, res) => {
         method: "POST",
         body: JSON.stringify({
           flags: InteractionResponseFlags.EPHEMERAL,
-          content: `Пользователь ${username} готов вписать слова (${words}) в дату`,
-          components: [
+          content: txt,
+          components: buttons.length ? [
             {
               type: 1,
-              components: [
-                {
-                  type: 2,
-                  style: 2,
-                  label: freeDates[0].label,
-                  custom_id: `free_date_${freeDates[0].value}`,
-                },
-                {
-                  type: 2,
-                  style: 1,
-                  label: freeDates[1].label,
-                  custom_id: `free_date_${freeDates[1].value}`,
-                },
-              ],
+              components: buttons,
             },
-          ],
+          ] : [],
         }),
       }
     );
@@ -193,8 +207,8 @@ router.post("/bot_add", async (_req, res) => {
 });
 
 router.post("/bot_add_two", async (_req, res) => {
+  const message = _req.body;
   try {
-    const message = _req.body;
     const { messageData, token, date, words, username } = message;
     await fetch(
       `https://discord.com/api/v8/webhooks/${messageData.webhook_id}/${token}/messages/${messageData.id}`,

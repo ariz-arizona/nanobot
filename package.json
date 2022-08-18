@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "ngrok": "ngrok http 8443",
-    "start_debug": "DEBUG='*' node index.js",
-    "start": "node index.js",
+    "start_debug": "npm cache clean --force && DEBUG='*' node index.js",
+    "start": "npm cache clean --force && node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
