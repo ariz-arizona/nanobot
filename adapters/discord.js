@@ -146,7 +146,6 @@ router.post("/bot_add", async (_req, res) => {
     const { token, words, username } = message;
     const freeDates = await getFreeDates(username);
     freeDates.map((el) => (el.value = [el.value, words].join("_")));
-    // freeDates[0].default = true;
     await fetch(
       `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
       {
@@ -160,11 +159,16 @@ router.post("/bot_add", async (_req, res) => {
               type: 1,
               components: [
                 {
-                  type: 3,
-                  custom_id: "free_date",
-                  options: freeDates.slice(0, 24),
-                  min_values: 1,
-                  max_values: 1
+                  type: 2,
+                  style: 2,
+                  label: freeDates[0].label,
+                  custom_id: `free_date_${freeDates[0].value}`,
+                },
+                {
+                  type: 2,
+                  style: 1,
+                  label: freeDates[1].label,
+                  custom_id: `free_date_${freeDates[1].value}`,
                 },
               ],
             },
@@ -205,9 +209,10 @@ router.post("/bot_add_two", async (_req, res) => {
               type: 1,
               components: [
                 {
-                  type: 3,
-                  custom_id: "free_date",
-                  options: [{ value: date, label: date, default: true }],
+                  type: 2,
+                  style: 2,
+                  label: words,
+                  custom_id: `free_date_${date}`,
                   disabled: true
                 },
               ],
@@ -348,7 +353,10 @@ router.post("/discord", async (_req, res) => {
             },
           });
           break;
-        case "free_date":
+        case /^free_date_/.test(command) && command:
+          const args = command.replace('free_date_', '').split('_');
+          options.date = args[0];
+          options.words = args[1];
           fetch(`${getPath(_req)}/bot_add_two`, {
             method: "post",
             headers: {
@@ -358,8 +366,8 @@ router.post("/discord", async (_req, res) => {
               messageData: message.message,
               token,
               username: user.username,
-              date: options.free_date[0].split("_")[0],
-              words: options.free_date[0].split("_")[1],
+              date: options.date,
+              words: options.words,
             }),
           });
 
