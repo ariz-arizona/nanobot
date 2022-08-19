@@ -80,11 +80,11 @@ const getFreeDates = async (username) => {
       const date = data[0].values[i].formattedValue;
       const target = data[findIndex].values[i].formattedValue;
       const condition = parseInt(date) === currentDay || parseInt(date) === (currentDay - 1);
-      if (i > 0 && !target && condition) {
+      if (i > 0 && condition) {
         // console.log({i, date, v: `${rows[i]}${findIndex + 1}`})
         freeDates.push({
           value: `${rows[i]}${findIndex + 1}`,
-          label: date,
+          label: `${date}${target ? ` (сейчас слов ${target})` : ''}`,
           style: parseInt(date) === currentDay ? 1 : 2
         });
       }
@@ -172,7 +172,7 @@ router.post("/bot_add", async (_req, res) => {
     const txt = buttons.length ?
       `(У бота сегодня ${(new Date()).getDate()} день)\nПользователь ${username} готов вписать слова (${words}) в дату:` :
       'Свободных дат не найдено';
-    
+
     await fetch(
       `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
       {
@@ -259,7 +259,7 @@ router.post("/bot_add_two", async (_req, res) => {
         headers: { "Content-Type": "application/json" },
         method: "POST",
         body: JSON.stringify({
-          content: `Ячейка ${date} обновлена\nПользователь: ${username}\nСлов: ${words}`,
+          content: `Пользователь: ${username}\nСлов: ${words}`,
         }),
       }
     );
@@ -306,6 +306,8 @@ router.post("/discord", async (_req, res) => {
   ) {
     try {
       const command = message.data.name || message.data.custom_id;
+      console.log(`Получена команда ${command}`);
+
       const options = {};
       if (message.data.options) {
         message.data.options.map((el) => {
@@ -315,9 +317,16 @@ router.post("/discord", async (_req, res) => {
       if (message.data.custom_id) {
         options[message.data.custom_id] = message.data.values;
       }
+
+      if (options.words) {
+        if (options.words < 0) options.words = 'В';
+        if (options.words > 65536) options.words = 65536;
+      }
+
       const user = message.guild_id ? message.member.user : message.user;
+
       const { token } = message;
-      console.log(`Получена команда ${command}`);
+
       switch (command) {
         case "stat":
           const userId =
