@@ -83,7 +83,7 @@ const getFreeDates = async (username) => {
       if (i > 0 && condition) {
         // console.log({i, date, v: `${rows[i]}${findIndex + 1}`})
         freeDates.push({
-          value: `${rows[i]}${findIndex + 1}`,
+          value: [`${rows[i]}${findIndex + 1}`, date].join('_'),
           label: `${date}${target ? ` (сейчас слов ${target})` : ''}`,
           style: parseInt(date) === currentDay ? 1 : 2
         });
@@ -209,7 +209,7 @@ router.post("/bot_add", async (_req, res) => {
 router.post("/bot_add_two", async (_req, res) => {
   const message = _req.body;
   try {
-    const { messageData, token, date, words, username } = message;
+    const { messageData, token, cell, date, words, username } = message;
     await fetch(
       `https://discord.com/api/v8/webhooks/${messageData.webhook_id}/${token}/messages/${messageData.id}`,
       {
@@ -217,7 +217,7 @@ router.post("/bot_add_two", async (_req, res) => {
         method: "PATCH",
         body: JSON.stringify({
           flags: InteractionResponseFlags.EPHEMERAL,
-          content: `Пользователь ${username} готов вписать слова (${words}) в дату`,
+          content: `Пользователь ${username} готов вписать слова (${words}) в дату ${date}`,
           components: [
             {
               type: 1,
@@ -225,8 +225,8 @@ router.post("/bot_add_two", async (_req, res) => {
                 {
                   type: 2,
                   style: 2,
-                  label: words,
-                  custom_id: `free_date_${date}`,
+                  label: `${words} слов в день ${date}`,
+                  custom_id: `free_date_${cell}_${date}`,
                   disabled: true
                 },
               ],
@@ -248,7 +248,7 @@ router.post("/bot_add_two", async (_req, res) => {
     sheets.spreadsheets.values.update({
       auth: jwt,
       spreadsheetId: SPREADSHEET_ID,
-      range: `Список участников!${date}`,
+      range: `Список участников!${cell}`,
       valueInputOption: "USER_ENTERED",
       resource: { values: [[words]] },
     });
@@ -259,7 +259,7 @@ router.post("/bot_add_two", async (_req, res) => {
         headers: { "Content-Type": "application/json" },
         method: "POST",
         body: JSON.stringify({
-          content: `Пользователь: ${username}\nСлов: ${words}`,
+          content: `Пользователь: ${username}\nСлов: ${words}\nДень: ${date}`,
         }),
       }
     );
@@ -378,8 +378,9 @@ router.post("/discord", async (_req, res) => {
           break;
         case /^free_date_/.test(command) && command:
           const args = command.replace('free_date_', '').split('_');
-          options.date = args[0];
-          options.words = args[1];
+          options.cell = args[0];
+          options.date = args[1];
+          options.words = args[2];
           fetch(`${getPath(_req)}/bot_add_two`, {
             method: "post",
             headers: {
@@ -389,6 +390,7 @@ router.post("/discord", async (_req, res) => {
               messageData: message.message,
               token,
               username: user.username,
+              cell: options.cell,
               date: options.date,
               words: options.words,
             }),
