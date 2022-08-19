@@ -320,7 +320,9 @@ router.post("/discord", async (_req, res) => {
 
       if (options.words) {
         if (options.words < 0) options.words = 'В';
-        if (options.words > 65536) options.words = 65536;
+        if (options.words > 65536) {
+          throw new Error('too many words')
+        }
       }
 
       const user = message.guild_id ? message.member.user : message.user;
@@ -416,18 +418,13 @@ router.post("/discord", async (_req, res) => {
           });
       }
     } catch (error) {
-      await fetch(
-        `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${message.token}`,
-        {
-          headers: { "Content-Type": "application/json" },
-          method: "post",
-          body: JSON.stringify({
-            content: errorMessage(error),
-          }),
-        }
-      );
       console.log(error);
-      res.sendStatus(500);
+      res.status(200).send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: errorMessage(error),
+        },
+      });
     }
   } else {
     res.status(400).send({ error: "Unknown Type" });

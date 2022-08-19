@@ -21,6 +21,9 @@ const loadPage = async (url) => {
 const errorMessage = (error) => {
   let msg;
   switch (error.message) {
+    case "too many words":
+      msg = "Слишком много слов";
+      break;
     case "notfound":
       msg = "Я ничего не нашел :(";
       break;
@@ -31,9 +34,8 @@ const errorMessage = (error) => {
 };
 
 const getPath = (_req) => {
-  return `http${_req.headers.host.indexOf("localhost") !== -1 ? "" : "s"}://${
-    _req.headers.host
-  }`;
+  return `http${_req.headers.host.indexOf("localhost") !== -1 ? "" : "s"}://${_req.headers.host
+    }`;
 };
 
 const auth = async () => {
