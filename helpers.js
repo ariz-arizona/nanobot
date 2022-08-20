@@ -22,7 +22,7 @@ const errorMessage = (error) => {
   let msg;
   switch (error.message) {
     case "too many words":
-      msg = "Слишком много слов";
+      msg = "Слишком большое количество слов, попробуйте еще раз";
       break;
     case "notfound":
       msg = "Я ничего не нашел :(";
