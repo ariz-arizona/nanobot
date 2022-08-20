@@ -13,6 +13,8 @@ const { errorMessage, getPath, auth, rows } = require("../helpers");
 const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY } = process.env;
 const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
 
+const PNDL_TARGET = 4200;
+
 const getStat = async (id) => {
   try {
     const sheets = google.sheets({
@@ -95,6 +97,27 @@ const getFreeDates = async (username) => {
     console.log(error);
   }
 };
+
+const getUserRow = async (username) => {
+  const sheets = google.sheets({
+    version: "v4",
+    auth: GOOGLE_API_KEY,
+  });
+  const res = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    includeGridData: true,
+    ranges: "A3:A60",
+  });
+  const data = res.data.sheets[0].data[0].rowData;
+  const findIndex = data.findIndex((el) => {
+    return el.values[0].formattedValue === username;
+  });
+  const findFree = data.findIndex((el) => {
+    return !el.values[0].formattedValue;
+  });
+
+  return { index: findIndex, free: findFree };
+}
 
 router.post("/bot_stat", async (_req, res) => {
   const message = _req.body;
@@ -279,6 +302,67 @@ router.post("/bot_add_two", async (_req, res) => {
   res.sendStatus(200);
 });
 
+router.post("/bot_add_user", async (_req, res) => {
+  const message = _req.body;
+  try {
+    const { token, target, username } = message;
+
+    const rowIndex = await getUserRow(username);
+    const freeRow = rowIndex.free + 3;
+
+    if (rowIndex.index !== -1) {
+      throw new Error('user exist')
+    }
+
+    const sheets = google.sheets({
+      version: "v4",
+      auth: GOOGLE_API_KEY,
+    });
+
+    const jwt = await auth();
+
+    sheets.spreadsheets.values.update({
+      auth: jwt,
+      spreadsheetId: SPREADSHEET_ID,
+      range: `Список участников!A${freeRow}`,
+      valueInputOption: "USER_ENTERED",
+      resource: { values: [[username]] },
+    });
+
+    sheets.spreadsheets.values.update({
+      auth: jwt,
+      spreadsheetId: SPREADSHEET_ID,
+      range: `Список участников!B${freeRow}`,
+      valueInputOption: "USER_ENTERED",
+      resource: { values: [[target]] },
+    });
+
+    await fetch(
+      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
+      {
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+        body: JSON.stringify({
+          content: `Пользователь: ${username}\nЦель: ${target}`,
+        }),
+      }
+    );
+  } catch (error) {
+    console.log(error);
+    await fetch(
+      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${message.token}`,
+      {
+        headers: { "Content-Type": "application/json" },
+        method: "post",
+        body: JSON.stringify({
+          content: errorMessage(error),
+        }),
+      }
+    );
+  }
+  res.sendStatus(200);
+});
+
 router.post("/discord", async (_req, res) => {
   const signature = _req.headers["x-signature-ed25519"];
   const timestamp = _req.headers["x-signature-timestamp"];
@@ -321,6 +405,13 @@ router.post("/discord", async (_req, res) => {
       if (options.words) {
         if (options.words < 0) options.words = 'В';
         if (options.words > 65536) {
+          throw new Error('too many words')
+        }
+      }
+
+      if (options.target) {
+        if (options.target < PNDL_TARGET) options.target = PNDL_TARGET;
+        if (options.target > 65536) {
           throw new Error('too many words')
         }
       }
@@ -407,6 +498,32 @@ router.post("/discord", async (_req, res) => {
               content: `Начинаю добавлять данные`,
             },
           });
+          break;
+        case "add_user":
+          if (!options.target) options.target = PNDL_TARGET;
+
+          fetch(`${getPath(_req)}/bot_add_user`, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token,
+              username: user.username,
+              target: options.target,
+            }),
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 200));
+
+          res.status(200).send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Начинаю добавлять пользователя`,
+            },
+          });
+          break;
           break;
         default:
           res.status(200).send({

@@ -35,6 +35,17 @@ const commands = [
       },
     ],
   },
+  {
+    name: "add_user",
+    description: "test add user command",
+    options: [
+      {
+        type: 4,
+        name: "target",
+        description: "target"
+      },
+    ],
+  },
 ];
 
 const rest = new REST({ version: "9" }).setToken(DISCORD_TOKEN);

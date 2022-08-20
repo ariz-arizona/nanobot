@@ -21,6 +21,9 @@ const loadPage = async (url) => {
 const errorMessage = (error) => {
   let msg;
   switch (error.message) {
+    case "user exist":
+      msg = "Пользователь уже существует";
+      break;
     case "too many words":
       msg = "Слишком большое количество слов, попробуйте еще раз";
       break;
