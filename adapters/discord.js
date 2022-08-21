@@ -430,6 +430,8 @@ router.post("/discord", async (_req, res) => {
               content: help.data,
             },
           });
+          
+          break;
         case "stat":
           const userId =
             options.id && !isNaN(parseInt(options.id))
