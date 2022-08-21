@@ -9,6 +9,7 @@ const {
 const { google } = require("googleapis");
 
 const { errorMessage, getPath, auth, rows } = require("../helpers");
+const help = require('../data/help.json');
 
 const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY } = process.env;
 const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
@@ -421,6 +422,14 @@ router.post("/discord", async (_req, res) => {
       const { token } = message;
 
       switch (command) {
+        case "help":
+          res.status(200).send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: InteractionResponseFlags.EPHEMERAL,
+              content: help.data,
+            },
+          });
         case "stat":
           const userId =
             options.id && !isNaN(parseInt(options.id))
