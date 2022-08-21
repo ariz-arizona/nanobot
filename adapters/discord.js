@@ -74,7 +74,7 @@ const getFreeDates = async (username) => {
       return el.values[0].formattedValue === username;
     });
 
-    if (!findIndex) {
+    if (!findIndex || !data[findIndex]) {
       return new Error("user not found");
     }
 
@@ -127,7 +127,7 @@ router.post("/bot_stat", async (_req, res) => {
 
     const data = await getStat(userId);
     const text =
-      data.length > 1
+      data && data.length > 1
         ? [
           `Запрос от пользователя: ${userId}`,
           `Пользователь: ${data[0]}`,
@@ -430,7 +430,7 @@ router.post("/discord", async (_req, res) => {
               content: help.data,
             },
           });
-          
+
           break;
         case "stat":
           const userId =
