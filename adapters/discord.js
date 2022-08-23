@@ -45,7 +45,7 @@ const getStat = async (id) => {
     }
 
     if (!data[selectedId] || !data[selectedId].values[0].formattedValue) {
-      return new Error("user not found");
+      throw new Error("user not found");
     }
 
     const values = data[selectedId].values.map((el) => el.formattedValue);
@@ -56,51 +56,47 @@ const getStat = async (id) => {
 };
 
 const getFreeDates = async (username) => {
-  try {
-    const sheets = google.sheets({
-      version: "v4",
-      auth: GOOGLE_API_KEY,
-    });
-    const res = await sheets.spreadsheets.get({
-      spreadsheetId: SPREADSHEET_ID,
-      includeGridData: true,
-      ranges: "A1:AF60",
-    });
+  const sheets = google.sheets({
+    version: "v4",
+    auth: GOOGLE_API_KEY,
+  });
+  const res = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    includeGridData: true,
+    ranges: "A1:AF60",
+  });
 
-    const currentDay = parseInt(new Date().toLocaleString("en-US", {
-      timeZone: "Europe/Moscow",
-      hour12: false,
-      day: 'numeric'
-    }));
-    const data = res.data.sheets[0].data[0].rowData;
+  const currentDay = parseInt(new Date().toLocaleString("en-US", {
+    timeZone: "Europe/Moscow",
+    hour12: false,
+    day: 'numeric'
+  }));
+  const data = res.data.sheets[0].data[0].rowData;
 
-    const findIndex = data.findIndex((el) => {
-      return el.values[0].formattedValue === username;
-    });
+  const findIndex = data.findIndex((el) => {
+    return el.values[0].formattedValue === username;
+  });
 
-    if (!findIndex || !data[findIndex]) {
-      return new Error("user not found");
-    }
-
-    const freeDates = [];
-    data[findIndex].values.map((el, i) => {
-      const date = data[0].values[i].formattedValue;
-      const target = data[findIndex].values[i].formattedValue;
-      const condition = parseInt(date) === currentDay || parseInt(date) === (currentDay - 1);
-      if (i > 0 && condition) {
-        // console.log({i, date, v: `${rows[i]}${findIndex + 1}`})
-        freeDates.push({
-          value: [`${rows[i]}${findIndex + 1}`, date].join('_'),
-          label: `${date}${target ? ` (сейчас слов ${target})` : ''}`,
-          style: parseInt(date) === currentDay ? 1 : 2
-        });
-      }
-    });
-
-    return freeDates;
-  } catch (error) {
-    console.log(error);
+  if (!findIndex || !data[findIndex]) {
+    throw new Error("user not found");
   }
+
+  const freeDates = [];
+  data[findIndex].values.map((el, i) => {
+    const date = data[0].values[i].formattedValue;
+    const target = data[findIndex].values[i].formattedValue;
+    const condition = parseInt(date) === currentDay || parseInt(date) === (currentDay - 1);
+    if (i > 0 && condition) {
+      // console.log({i, date, v: `${rows[i]}${findIndex + 1}`})
+      freeDates.push({
+        value: [`${rows[i]}${findIndex + 1}`, date].join('_'),
+        label: `${date}${target ? ` (сейчас слов ${target})` : ''}`,
+        style: parseInt(date) === currentDay ? 1 : 2
+      });
+    }
+  });
+
+  return freeDates;
 };
 
 const getUserRow = async (username) => {
@@ -198,7 +194,7 @@ router.post("/bot_add", async (_req, res) => {
     }
 
     const txt = buttons.length ?
-      `(У бота сегодня ${(new Date()).getDate()} день)\nПользователь ${username} готов вписать слова (${words}) в дату:` :
+      `Пользователь ${username} готов вписать слова (${words}) в дату:` :
       'Свободных дат не найдено';
 
     await fetch(

@@ -21,6 +21,9 @@ const loadPage = async (url) => {
 const errorMessage = (error) => {
   let msg;
   switch (error.message) {
+    case "user not found":
+      msg = "Пользователь не найден";
+      break;
     case "user exist":
       msg = "Пользователь уже существует";
       break;
