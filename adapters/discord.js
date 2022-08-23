@@ -283,7 +283,7 @@ router.post("/bot_add_two", async (_req, res) => {
         headers: { "Content-Type": "application/json" },
         method: "POST",
         body: JSON.stringify({
-          content: `Пользователь: ${username}\nСлов: ${words}\nДень: ${date}`,
+          content: [`Пользователь: ${username}`, `День: ${date}`, `Слов: ${words}`].join('\n'),
         }),
       }
     );
