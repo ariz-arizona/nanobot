@@ -67,7 +67,11 @@ const getFreeDates = async (username) => {
       ranges: "A1:AF60",
     });
 
-    const currentDay = (new Date()).getDate();
+    const currentDay = parseInt(new Date().toLocaleString("en-US", {
+      timeZone: "Europe/Moscow",
+      hour12: false,
+      day: '2-digit'
+    }));
     const data = res.data.sheets[0].data[0].rowData;
 
     const findIndex = data.findIndex((el) => {
