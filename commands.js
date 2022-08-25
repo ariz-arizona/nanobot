@@ -5,7 +5,7 @@ require("dotenv").config();
 
 const { DISCORD_APPLICATION_ID, DISCORD_TOKEN } = process.env;
 // const DISCORD_TOKEN =
-//   "MTAwNjk0ODI1NTE4MTA1ODA3OA.GgHCof.8HYbpzMllrTfqlFu6SsHiZRW8kmYwbEefeCqg0";
+  // "MTAwNjk0ODI1NTE4MTA1ODA3OA.GgHCof.8HYbpzMllrTfqlFu6SsHiZRW8kmYwbEefeCqg0";
 // const DISCORD_APPLICATION_ID = "1006948255181058078";
 
 const { REST } = require("@discordjs/rest");
@@ -17,7 +17,7 @@ const commands = [
     description: "help",
   },{
     name: "stat",
-    description: "test stat command",
+    description: "Получить статистику пользователя",
     options: [
       {
         type: 4,
@@ -28,7 +28,7 @@ const commands = [
   },
   {
     name: "add",
-    description: "test add command",
+    description: "Сдать отчет",
     options: [
       {
         type: 4,
@@ -36,11 +36,16 @@ const commands = [
         description: "words",
         required: true
       },
+      {
+        type: 3,
+        name: "comment",
+        description: "comment",
+      },
     ],
   },
   {
     name: "add_user",
-    description: "test add user command",
+    description: "Зарегистрироваться на пендель",
     options: [
       {
         type: 4,

@@ -170,7 +170,7 @@ router.post("/bot_stat", async (_req, res) => {
 router.post("/bot_add", async (_req, res) => {
   const message = _req.body;
   try {
-    const { token, words, username } = message;
+    const { token, words, username, comment } = message;
 
     const freeDates = await getFreeDates(username);
     freeDates.map((el) => (el.value = [el.value, words].join("_")));
@@ -194,8 +194,18 @@ router.post("/bot_add", async (_req, res) => {
     }
 
     const txt = buttons.length ?
-      `Пользователь ${username} готов вписать слова (${words}) в дату:` :
-      'Свободных дат не найдено';
+      [
+        `Пользователь: ${username}`,
+        `Слов: ${words}`,
+      ] :
+      ['Свободных дат не найдено'];
+
+    if (buttons.length) {
+      if (comment) {
+        txt.push(`Комментарий: ${comment || ''}`);
+      }
+      txt.push(`Укажите дату:`);
+    }
 
     await fetch(
       `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
@@ -204,7 +214,7 @@ router.post("/bot_add", async (_req, res) => {
         method: "POST",
         body: JSON.stringify({
           flags: InteractionResponseFlags.EPHEMERAL,
-          content: txt,
+          content: txt.join('\n'),
           components: buttons.length ? [
             {
               type: 1,
@@ -234,6 +244,9 @@ router.post("/bot_add_two", async (_req, res) => {
   const message = _req.body;
   try {
     const { messageData, token, cell, date, words, username } = message;
+    const commentRaw = messageData.content.split('\n').find(el => el.split(': ')[0] === 'Комментарий');
+    const comment = commentRaw ? commentRaw.split(': ')[1] : false;
+
     await fetch(
       `https://discord.com/api/v8/webhooks/${messageData.webhook_id}/${token}/messages/${messageData.id}`,
       {
@@ -276,6 +289,8 @@ router.post("/bot_add_two", async (_req, res) => {
       valueInputOption: "USER_ENTERED",
       resource: { values: [[words]] },
     });
+    const txt = [`Пользователь: **${username}**`, `День: ${date}`, `Слов: ${words}`];
+    if (comment) txt.push(`Комментарий: *${comment}*`)
 
     await fetch(
       `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
@@ -283,7 +298,7 @@ router.post("/bot_add_two", async (_req, res) => {
         headers: { "Content-Type": "application/json" },
         method: "POST",
         body: JSON.stringify({
-          content: [`Пользователь: ${username}`, `День: ${date}`, `Слов: ${words}`].join('\n'),
+          content: txt.join('\n'),
         }),
       }
     );
@@ -467,6 +482,7 @@ router.post("/discord", async (_req, res) => {
               token,
               username: user.username,
               words: options.words,
+              comment: options.comment
             }),
           });
 
