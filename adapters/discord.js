@@ -280,28 +280,51 @@ router.post("/bot_add_two", async (_req, res) => {
       auth: GOOGLE_API_KEY,
     });
 
-    const jwt = await auth();
-
-    sheets.spreadsheets.values.update({
-      auth: jwt,
+    const data = await sheets.spreadsheets.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `Список участников!${cell}`,
-      valueInputOption: "USER_ENTERED",
-      resource: { values: [[words]] },
+      includeGridData: true,
+      ranges: cell,
     });
-    const txt = [`Пользователь: **${username}**`, `День: ${date}`, `Слов: ${words}`];
-    if (comment) txt.push(`Комментарий: *${comment}*`)
 
-    await fetch(
-      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
-      {
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-        body: JSON.stringify({
-          content: txt.join('\n'),
-        }),
-      }
-    );
+    const value = data.data.sheets[0].data[0].rowData[0].values[0].formattedValue;
+    
+    if (parseInt(value) === parseInt(words)) {
+      await fetch(
+        `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
+        {
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+          body: JSON.stringify({
+            flags: InteractionResponseFlags.EPHEMERAL,
+            content: ['Кажется, такой отчет уже сдан :(', `День: ${date}`, `Слов: ${words}`].join('\n'),
+          }),
+        }
+      );
+    } else {
+      const jwt = await auth();
+
+      sheets.spreadsheets.values.update({
+        auth: jwt,
+        spreadsheetId: SPREADSHEET_ID,
+        range: `Список участников!${cell}`,
+        valueInputOption: "USER_ENTERED",
+        resource: { values: [[words]] },
+      });
+
+      const txt = [`Пользователь: **${username}**`, `День: ${date}`, `Слов: ${words}`];
+      if (comment) txt.push(`Комментарий: *${comment}*`)
+
+      await fetch(
+        `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
+        {
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+          body: JSON.stringify({
+            content: txt.join('\n'),
+          }),
+        }
+      );
+    }
   } catch (error) {
     console.log(error);
     await fetch(
