@@ -31,6 +31,17 @@ const sendErrorToDiscord = async (error, token) => {
   );
 }
 
+const sendMsgToDiscord = async (body, url, method = "POST") => {
+  await fetch(
+    `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${url}`,
+    {
+      headers: { "Content-Type": "application/json" },
+      method: method,
+      body: JSON.stringify(body),
+    }
+  );
+}
+
 router.post("/bot_stat", async (_req, res) => {
   const message = _req.body;
   try {
@@ -52,18 +63,12 @@ router.post("/bot_stat", async (_req, res) => {
           } ${userId}`,
         ];
 
-    await fetch(
-      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
-      {
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-        body: JSON.stringify({
-          content: text.join("\n"),
-        }),
-      }
-    );
+    const body = {
+      content: text.join("\n"),
+    };
+    await sendMsgToDiscord(body, token);
   } catch (error) {
-    sendErrorToDiscord(error, message.token);
+    await sendErrorToDiscord(error, message.token);
   }
   res.sendStatus(200);
 });
@@ -108,25 +113,20 @@ router.post("/bot_add", async (_req, res) => {
       txt.push(`Укажите дату:`);
     }
 
-    await fetch(
-      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
-      {
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-        body: JSON.stringify({
-          flags: InteractionResponseFlags.EPHEMERAL,
-          content: txt.join('\n'),
-          components: buttons.length ? [
-            {
-              type: 1,
-              components: buttons,
-            },
-          ] : [],
-        }),
-      }
-    );
+    const body = {
+      flags: InteractionResponseFlags.EPHEMERAL,
+      content: txt.join('\n'),
+      components: buttons.length ? [
+        {
+          type: 1,
+          components: buttons,
+        },
+      ] : [],
+    };
+
+    await sendMsgToDiscord(body, token);
   } catch (error) {
-    sendErrorToDiscord(error, message.token);
+    await sendErrorToDiscord(error, message.token);
   }
   res.sendStatus(200);
 });
@@ -138,33 +138,25 @@ router.post("/bot_add_two", async (_req, res) => {
     const commentRaw = messageData.content.split('\n').find(el => el.split(': ')[0] === 'Комментарий');
     const comment = commentRaw ? commentRaw.split(': ')[1] : false;
 
-    await fetch(
-      `https://discord.com/api/v8/webhooks/${messageData.webhook_id}/${token}/messages/${messageData.id}`,
-      {
-        headers: { "Content-Type": "application/json" },
-        method: "PATCH",
-        body: JSON.stringify({
-          flags: InteractionResponseFlags.EPHEMERAL,
-          content: `Пользователь ${username} готов вписать слова (${words}) в дату ${date}`,
+    const body = {
+      flags: InteractionResponseFlags.EPHEMERAL,
+      content: `Пользователь ${username} готов вписать слова (${words}) в дату ${date}`,
+      components: [
+        {
+          type: 1,
           components: [
             {
-              type: 1,
-              components: [
-                {
-                  type: 2,
-                  style: 2,
-                  label: `${words} слов в день ${date}`,
-                  custom_id: `free_date_${cell}_${date}`,
-                  disabled: true
-                },
-              ],
+              type: 2,
+              style: 2,
+              label: `${words} слов в день ${date}`,
+              custom_id: `free_date_${cell}_${date}`,
+              disabled: true
             },
           ],
-        }),
-      }
-    );
-
-    // console.log(date, words, username);
+        },
+      ],
+    };
+    await sendMsgToDiscord(body, `${token}/messages/${messageData.id}`, 'PATCH');
 
     const sheets = google.sheets({
       version: "v4",
@@ -180,17 +172,11 @@ router.post("/bot_add_two", async (_req, res) => {
     const value = data.data.sheets[0].data[0].rowData[0].values[0].formattedValue;
 
     if (parseInt(value) === parseInt(words)) {
-      await fetch(
-        `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
-        {
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-          body: JSON.stringify({
-            flags: InteractionResponseFlags.EPHEMERAL,
-            content: ['Кажется, такой отчет уже сдан :(', `День: ${date}`, `Слов: ${words}`].join('\n'),
-          }),
-        }
-      );
+      const duplicateBody = {
+        flags: InteractionResponseFlags.EPHEMERAL,
+        content: ['Кажется, такой отчет уже сдан :(', `День: ${date}`, `Слов: ${words}`].join('\n'),
+      };
+      await sendMsgToDiscord(duplicateBody, token);
     } else {
       const jwt = await auth();
 
@@ -205,19 +191,10 @@ router.post("/bot_add_two", async (_req, res) => {
       const txt = [`Пользователь: **${username}**`, `День: ${date}`, `Слов: ${words}`];
       if (comment) txt.push(`Комментарий: *${comment}*`)
 
-      await fetch(
-        `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
-        {
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-          body: JSON.stringify({
-            content: txt.join('\n'),
-          }),
-        }
-      );
+      await sendMsgToDiscord({ content: txt.join('\n') }, token);
     }
   } catch (error) {
-    sendErrorToDiscord(error, message.token);
+    await sendErrorToDiscord(error, message.token);
   }
   res.sendStatus(200);
 });
@@ -257,18 +234,12 @@ router.post("/bot_add_user", async (_req, res) => {
       resource: { values: [[target]] },
     });
 
-    await fetch(
-      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
-      {
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-        body: JSON.stringify({
-          content: `Пользователь: ${username}\nЦель: ${target}`,
-        }),
-      }
-    );
+    const body = {
+      content: [`Пользователь: ${username}`, `Цель: ${target}`].join('\n'),
+    };
+    await sendMsgToDiscord(body, token);
   } catch (error) {
-    sendErrorToDiscord(error, message.token);
+    await sendErrorToDiscord(error, message.token);
   }
   res.sendStatus(200);
 });
