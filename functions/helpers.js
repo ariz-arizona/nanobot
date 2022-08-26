@@ -1,5 +1,5 @@
 const { google } = require("googleapis");
-const privatekey = require("./privatekey.json");
+const privatekey = require("../privatekey.json");
 
 const loadPage = async (url) => {
   if (!url) {
