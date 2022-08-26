@@ -16,6 +16,20 @@ const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
 
 const PNDL_TARGET = 4200;
 
+const sendErrorToDiscord = async (error, token) => {
+  console.log(error);
+  await fetch(
+    `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
+    {
+      headers: { "Content-Type": "application/json" },
+      method: "post",
+      body: JSON.stringify({
+        content: errorMessage(error),
+      }),
+    }
+  );
+}
+
 const getStat = async (id) => {
   try {
     const sheets = google.sheets({
@@ -152,17 +166,7 @@ router.post("/bot_stat", async (_req, res) => {
       }
     );
   } catch (error) {
-    console.log(error);
-    await fetch(
-      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${message.token}`,
-      {
-        headers: { "Content-Type": "application/json" },
-        method: "post",
-        body: JSON.stringify({
-          content: errorMessage(error),
-        }),
-      }
-    );
+    sendErrorToDiscord(error, message.token);
   }
   res.sendStatus(200);
 });
@@ -225,17 +229,7 @@ router.post("/bot_add", async (_req, res) => {
       }
     );
   } catch (error) {
-    console.log(error);
-    await fetch(
-      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${message.token}`,
-      {
-        headers: { "Content-Type": "application/json" },
-        method: "post",
-        body: JSON.stringify({
-          content: errorMessage(error),
-        }),
-      }
-    );
+    sendErrorToDiscord(error, message.token);
   }
   res.sendStatus(200);
 });
@@ -287,7 +281,7 @@ router.post("/bot_add_two", async (_req, res) => {
     });
 
     const value = data.data.sheets[0].data[0].rowData[0].values[0].formattedValue;
-    
+
     if (parseInt(value) === parseInt(words)) {
       await fetch(
         `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
@@ -326,17 +320,7 @@ router.post("/bot_add_two", async (_req, res) => {
       );
     }
   } catch (error) {
-    console.log(error);
-    await fetch(
-      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${message.token}`,
-      {
-        headers: { "Content-Type": "application/json" },
-        method: "post",
-        body: JSON.stringify({
-          content: errorMessage(error),
-        }),
-      }
-    );
+    sendErrorToDiscord(error, message.token);
   }
   res.sendStatus(200);
 });
@@ -387,17 +371,7 @@ router.post("/bot_add_user", async (_req, res) => {
       }
     );
   } catch (error) {
-    console.log(error);
-    await fetch(
-      `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${message.token}`,
-      {
-        headers: { "Content-Type": "application/json" },
-        method: "post",
-        body: JSON.stringify({
-          content: errorMessage(error),
-        }),
-      }
-    );
+    sendErrorToDiscord(error, message.token);
   }
   res.sendStatus(200);
 });
