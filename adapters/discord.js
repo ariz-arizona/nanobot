@@ -81,11 +81,13 @@ router.post("/bot_add", async (_req, res) => {
     const freeDates = await getFreeDates(username);
     freeDates.map((el) => (el.value = [el.value, words].join("_")));
 
-    const currentHour = parseInt(new Date().toLocaleString("en-US", {
+    let currentHour = parseInt(new Date().toLocaleString("en-US", {
       timeZone: "Europe/Moscow",
       hour12: false,
       hour: 'numeric'
     }));
+    if(currentHour === 24) currentHour = 0;
+    // console.log({currentHour});
     if (words !== 'В' && currentHour >= 10 && freeDates.length > 1) {
       freeDates.shift();
     }
