@@ -171,7 +171,7 @@ router.post("/bot_add_two", async (_req, res) => {
 
     const value = data.data.sheets[0].data[0].rowData[0].values[0].formattedValue;
 
-    if (parseInt(value) === parseInt(words)) {
+    if (value === words) {
       const duplicateBody = {
         flags: InteractionResponseFlags.EPHEMERAL,
         content: ['Кажется, такой отчет уже сдан :(', `День: ${date}`, `Слов: ${words}`].join('\n'),
