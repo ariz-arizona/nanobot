@@ -32,7 +32,7 @@ const getStat = async (id) => {
     }
 
     if (!data[selectedId] || !data[selectedId].values[0].formattedValue) {
-        throw new Error("user not found");
+        throw new Error(`user not found|${id}`);
     }
 
     const values = data[selectedId].values.map((el) => el.formattedValue);
@@ -62,7 +62,7 @@ const getFreeDates = async (username) => {
     });
 
     if (!findIndex || !data[findIndex]) {
-        throw new Error("user not found");
+        throw new Error(`user not found|${username}`);
     }
 
     const freeDates = [];
