@@ -12,7 +12,7 @@ const { errorMessage, getPath, auth } = require("../functions/helpers");
 const { getFreeDates, getUserRow, getStat } = require("../functions/main");
 const help = require('../data/help.json');
 
-const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY } = process.env;
+const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY, DISCORD_TOKEN } = process.env;
 const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
 
 const PNDL_TARGET = 4200;
@@ -20,7 +20,7 @@ const PNDL_TARGET = 4200;
 const sendErrorToDiscord = async (error, token) => {
   console.log(error);
   await fetch(
-    `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
+    `https://discord.com/api/v9/webhooks/${DISCORD_APPLICATION_ID}/${token}`,
     {
       headers: { "Content-Type": "application/json" },
       method: "post",
@@ -33,7 +33,7 @@ const sendErrorToDiscord = async (error, token) => {
 
 const sendMsgToDiscord = async (body, url, method = "POST") => {
   return await fetch(
-    `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${url}`,
+    `https://discord.com/api/v9/webhooks/${DISCORD_APPLICATION_ID}/${url}`,
     {
       headers: { "Content-Type": "application/json" },
       method: method,
@@ -86,7 +86,7 @@ router.post("/bot_add", async (_req, res) => {
       hour12: false,
       hour: 'numeric'
     }));
-    if(currentHour === 24) currentHour = 0;
+    if (currentHour === 24) currentHour = 0;
     // console.log({currentHour});
     if (words !== 'В' && currentHour >= 10 && freeDates.length > 1) {
       freeDates.shift();
@@ -202,7 +202,16 @@ router.post("/bot_add_two", async (_req, res) => {
       const txt = [`Пользователь: **${username}**`, `День: ${date}`, `Слов: ${words}`];
       if (comment) txt.push(`Комментарий: *${comment}*`)
 
-      await sendMsgToDiscord({ content: txt.join('\n') }, token);
+      const response = await sendMsgToDiscord({ content: txt.join('\n') }, token);
+      const msg = await response.json();
+
+      await fetch(
+        `https://discord.com/api/v9/channels/${msg.channel_id}/messages/${msg.id}/reactions/\u2705/@me`,
+        {
+          headers: { authorization: `Bot ${DISCORD_TOKEN}` },
+          method: 'PUT',
+        }
+      );
     }
   } catch (error) {
     await sendErrorToDiscord(error, message.token);

@@ -21,7 +21,7 @@ const loadPage = async (url) => {
 const errorMessage = (error) => {
   let msg;
   switch (error.message) {
-    case /^user not found|/.test(error.message) && error.message:
+    case /^user not found\|/.test(error.message) && error.message:
       msg = `Пользователь **${error.message.split('|')[1]}** не найден`;
       break;
     case "user not found":
