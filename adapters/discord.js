@@ -32,7 +32,7 @@ const sendErrorToDiscord = async (error, token) => {
 }
 
 const sendMsgToDiscord = async (body, url, method = "POST") => {
-  await fetch(
+  return await fetch(
     `https://discord.com/api/v8/webhooks/${DISCORD_APPLICATION_ID}/${url}`,
     {
       headers: { "Content-Type": "application/json" },
