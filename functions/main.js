@@ -24,15 +24,15 @@ const getStat = async (id) => {
         if (id < 0) id = 0;
         if (id > 50) id = 50;
     }
-
+    
     if (typeof id === "string") {
         const findIndex = data.findIndex((el) => {
-            return el.values[0].formattedValue === id;
+            return el.values[1].formattedValue === id;
         });
         if (findIndex) selectedId = findIndex;
     }
 
-    if (!data[selectedId] || !data[selectedId].values[0].formattedValue) {
+    if (!data[selectedId] || !data[selectedId].values[1].formattedValue) {
         throw new Error(`user not found|${id}`);
     }
 
