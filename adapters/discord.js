@@ -52,8 +52,8 @@ router.post("/bot_stat", async (_req, res) => {
       data && data.length > 1
         ? [
           `Запрос от пользователя: ${userId}`,
-          `Пользователь: ${data[1]}`,
-          `Цель: ${data[2]}`,
+          `Пользователь: ${data[0]}`,
+          `Цель: ${data[1]}`,
           `Среднее: ${data[data.length - 3]}`,
           `Общее: ${data[data.length - 2]}`,
           `Остаток до цели: ${data[data.length - 1]}`,
@@ -241,7 +241,7 @@ router.post("/bot_add_user", async (_req, res) => {
     sheets.spreadsheets.values.update({
       auth: jwt,
       spreadsheetId: SPREADSHEET_ID,
-      range: `Список участников!B${freeRow}`,
+      range: `Список участников!A${freeRow}`,
       valueInputOption: "USER_ENTERED",
       resource: { values: [[username]] },
     });
@@ -249,7 +249,7 @@ router.post("/bot_add_user", async (_req, res) => {
     sheets.spreadsheets.values.update({
       auth: jwt,
       spreadsheetId: SPREADSHEET_ID,
-      range: `Список участников!C${freeRow}`,
+      range: `Список участников!B${freeRow}`,
       valueInputOption: "USER_ENTERED",
       resource: { values: [[target]] },
     });
