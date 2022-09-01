@@ -205,13 +205,34 @@ router.post("/bot_add_two", async (_req, res) => {
       const response = await sendMsgToDiscord({ content: txt.join('\n') }, token);
       const msg = await response.json();
 
+      const checkReaction = '\u2705'; // check
+      let reaction;
+      if (words == 'В') {
+        reaction = '\uD83D\uDCA4'; // zzz
+      }
+      if (words == 69 || words == 96 || words === 696 || words === 969) {
+        reaction = '\uD83D\uDE0F'; // zzz
+      }
+      if (words >= 1000) {
+        reaction = '\uD83D\uDCAA'; // muscle
+      }
+
       await fetch(
-        `https://discord.com/api/v9/channels/${msg.channel_id}/messages/${msg.id}/reactions/\u2705/@me`,
+        `https://discord.com/api/v9/channels/${msg.channel_id}/messages/${msg.id}/reactions/${checkReaction}/@me`,
         {
           headers: { authorization: `Bot ${DISCORD_TOKEN}` },
           method: 'PUT',
         }
       );
+      if (reaction) {
+        await fetch(
+          `https://discord.com/api/v9/channels/${msg.channel_id}/messages/${msg.id}/reactions/${reaction}/@me`,
+          {
+            headers: { authorization: `Bot ${DISCORD_TOKEN}` },
+            method: 'PUT',
+          }
+        );
+      }
     }
   } catch (error) {
     await sendErrorToDiscord(error, message.token);
