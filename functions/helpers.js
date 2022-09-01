@@ -101,4 +101,11 @@ const rows = {
   31: "AF",
 };
 
-module.exports = { loadPage, errorMessage, getPath, auth, rows };
+const getPreviousDay = (date = new Date()) => {
+  const previous = new Date(date.getTime());
+  previous.setDate(date.getDate() - 1);
+
+  return previous;
+}
+
+module.exports = { loadPage, errorMessage, getPath, auth, rows, getPreviousDay };

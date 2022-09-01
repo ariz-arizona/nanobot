@@ -1,6 +1,6 @@
 const { google } = require("googleapis");
 
-const { rows } = require("../functions/helpers");
+const { rows, getPreviousDay } = require("../functions/helpers");
 
 const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
 
@@ -50,12 +50,13 @@ const getFreeDates = async (username) => {
         includeGridData: true,
         ranges: "A1:AF60",
     });
-
-    const currentDay = parseInt(new Date().toLocaleString("en-US", {
+    const timezone = {
         timeZone: "Europe/Moscow",
         hour12: false,
         day: 'numeric'
-    }));
+    };
+    const currentDay = parseInt(new Date().toLocaleString("en-US", timezone));
+    const previousDay = parseInt(getPreviousDay().toLocaleString("en-US", timezone));
     const data = res.data.sheets[0].data[0].rowData;
 
     const findIndex = data.findIndex((el) => {
@@ -70,7 +71,7 @@ const getFreeDates = async (username) => {
     data[findIndex].values.map((el, i) => {
         const date = data[0].values[i].formattedValue;
         const target = data[findIndex].values[i].formattedValue;
-        const condition = parseInt(date) === currentDay || parseInt(date) === (currentDay - 1);
+        const condition = parseInt(date) === currentDay || parseInt(date) === previousDay;
         if (i > 0 && condition) {
             // console.log({i, date, v: `${rows[i]}${findIndex + 1}`})
             freeDates.push({
