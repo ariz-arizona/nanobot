@@ -36,6 +36,9 @@ const errorMessage = (error) => {
     case "notfound":
       msg = "Я ничего не нашел :(";
       break;
+    case "no words yesterday":
+      msg = "Вы уже не можете отправлять отчет за вчера :(";
+      break;
     default:
       msg = "Ой! Что-то случилось! Может, попробуете еще раз?";
   }
@@ -108,4 +111,36 @@ const getPreviousDay = (date = new Date()) => {
   return previous;
 }
 
-module.exports = { loadPage, errorMessage, getPath, auth, rows, getPreviousDay };
+const getReaction = (words) => {
+  let reaction;
+  if (words == 'В') {
+    reaction = '\uD83D\uDCA4'; // zzz // В 💤
+  }
+  if (words == 34) {
+    reaction = '\uD83C\uDF46'; // 34 🍆
+  }
+  if (words == 42) {
+    reaction = '\uD83E\uDDE3'; // 42 🧣
+  }
+  if (words == 69 || words == 96 || words === 696 || words === 969) {
+    reaction = '\uD83D\uDE0F'; // smirk
+  }
+  if (words == 300) {
+    reaction = '\uD83D\uDE9C'; // 300 🚜
+  }
+  if (words == 314) {
+    reaction = '\uD83E\uDD67'; // 314 🥧
+  }
+  if (words == 666) {
+    reaction = '\uD83D\uDE08'; // 666 😈
+  }
+  if (words >= 1000) {
+    reaction = '\uD83D\uDCAA'; // muscle // >1000 💪
+  }
+  if (words >= 4000) {
+    reaction = '\uD83E\uDDBE'; // >4000 🦾 
+  }
+  return reaction;
+}
+
+module.exports = { loadPage, errorMessage, getPath, auth, rows, getPreviousDay, getReaction };

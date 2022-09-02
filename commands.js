@@ -44,6 +44,40 @@ const commands = [
     ],
   },
   {
+    name: "today",
+    description: "СЕГОДНЯ: Сдать отчет",
+    options: [
+      {
+        type: 4,
+        name: "words",
+        description: "words",
+        required: true
+      },
+      {
+        type: 3,
+        name: "comment",
+        description: "comment",
+      },
+    ],
+  },
+  {
+    name: "yesterday",
+    description: "ВЧЕРА: Сдать отчет",
+    options: [
+      {
+        type: 4,
+        name: "words",
+        description: "words",
+        required: true
+      },
+      {
+        type: 3,
+        name: "comment",
+        description: "comment",
+      },
+    ],
+  },
+  {
     name: "add_user",
     description: "Зарегистрироваться на пендель",
     options: [

@@ -8,7 +8,7 @@ const {
 } = require("discord-interactions");
 const { google } = require("googleapis");
 
-const { errorMessage, getPath, auth } = require("../functions/helpers");
+const { errorMessage, getPath, auth, getReaction } = require("../functions/helpers");
 const { getFreeDates, getUserRow, getStat } = require("../functions/main");
 const help = require('../data/help.json');
 
@@ -76,7 +76,7 @@ router.post("/bot_stat", async (_req, res) => {
 router.post("/bot_add", async (_req, res) => {
   const message = _req.body;
   try {
-    const { token, words, username, comment } = message;
+    const { token, words, username, comment, day } = message;
 
     const freeDates = await getFreeDates(username);
     freeDates.map((el) => (el.value = [el.value, words].join("_")));
@@ -88,7 +88,8 @@ router.post("/bot_add", async (_req, res) => {
     }));
     if (currentHour === 24) currentHour = 0;
     // console.log({currentHour});
-    if (words !== 'В' && currentHour >= 10 && freeDates.length > 1) {
+    const yesterdayReportCondition = (words !== 'В' && currentHour >= 10 && freeDates.length > 1);
+    if (yesterdayReportCondition) {
       freeDates.shift();
     }
 
@@ -124,18 +125,43 @@ router.post("/bot_add", async (_req, res) => {
       txt.push(`Укажите дату:`);
     }
 
-    const body = {
-      flags: InteractionResponseFlags.EPHEMERAL,
-      content: txt.join('\n'),
-      components: buttons.length ? [
-        {
-          type: 1,
-          components: buttons,
+    if (day) {
+      const body = {
+        token,
+        _comment: comment || false,
+        username: username,
+        date: day,
+        words: words,
+      };
+      // console.log(freeDates);
+      if (day === 'today') {
+        body.cell = freeDates[freeDates.length - 1].value.split('_')[0];
+      } else if (day === 'yesterday' && !yesterdayReportCondition) {
+        body.cell = freeDates[0].value.split('_')[0];
+      } else if (day === 'yesterday' && yesterdayReportCondition) {
+        throw new Error('no words yesterday');
+      }
+      fetch(`${getPath(_req)}/bot_add_two`, {
+        method: "post",
+        headers: {
+          "Content-Type": "application/json",
         },
-      ] : [],
-    };
+        body: JSON.stringify(body),
+      });
+    } else {
+      const body = {
+        flags: InteractionResponseFlags.EPHEMERAL,
+        content: txt.join('\n'),
+        components: buttons.length ? [
+          {
+            type: 1,
+            components: buttons,
+          },
+        ] : [],
+      };
 
-    await sendMsgToDiscord(body, token);
+      await sendMsgToDiscord(body, token);
+    }
   } catch (error) {
     await sendErrorToDiscord(error, message.token);
   }
@@ -145,9 +171,14 @@ router.post("/bot_add", async (_req, res) => {
 router.post("/bot_add_two", async (_req, res) => {
   const message = _req.body;
   try {
-    const { messageData, token, cell, date, words, username } = message;
-    const commentRaw = messageData.content.split('\n').find(el => el.split(': ')[0] === 'Комментарий');
-    const comment = commentRaw ? commentRaw.split(': ')[1] : false;
+    const { messageData, token, cell, date, words, username, _comment } = message;
+    let comment;
+    if (_comment !== undefined) {
+      comment = _comment
+    } else {
+      const commentRaw = messageData.content.split('\n').find(el => el.split(': ')[0] === 'Комментарий');
+      comment = commentRaw ? commentRaw.split(': ')[1] : false;
+    }
 
     const body = {
       flags: InteractionResponseFlags.EPHEMERAL,
@@ -167,7 +198,9 @@ router.post("/bot_add_two", async (_req, res) => {
         },
       ],
     };
-    await sendMsgToDiscord(body, `${token}/messages/${messageData.id}`, 'PATCH');
+    if (messageData) {
+      await sendMsgToDiscord(body, `${token}/messages/${messageData.id}`, 'PATCH');
+    }
 
     const sheets = google.sheets({
       version: "v4",
@@ -206,34 +239,7 @@ router.post("/bot_add_two", async (_req, res) => {
       const msg = await response.json();
 
       const checkReaction = '\u2705'; // check
-      let reaction;
-      if (words == 'В') {
-        reaction = '\uD83D\uDCA4'; // zzz // В 💤
-      }
-      if (words == 34) {
-        reaction = '\uD83C\uDF46'; // 34 🍆
-      }
-      if (words == 42) {
-        reaction = '\uD83E\uDDE3'; // 42 🧣
-      }
-      if (words == 69 || words == 96 || words === 696 || words === 969) {
-        reaction = '\uD83D\uDE0F'; // smirk
-      }
-      if (words == 300) {
-        reaction = '\uD83D\uDE9C'; // 300 🚜
-      }
-      if (words == 314) {
-        reaction = '\uD83E\uDD67'; // 314 🥧
-      }
-      if (words == 666) {
-        reaction = '\uD83D\uDE08'; // 666 😈
-      }
-      if (words >= 1000) {
-        reaction = '\uD83D\uDCAA'; // muscle // >1000 💪
-      }
-      if (words >= 4000) {
-        reaction = '\uD83E\uDDBE'; // >4000 🦾 
-      }
+      const reaction = getReaction(words);
 
       await fetch(
         `https://discord.com/api/v9/channels/${msg.channel_id}/messages/${msg.id}/reactions/${checkReaction}/@me`,
@@ -407,6 +413,56 @@ router.post("/discord", async (_req, res) => {
               username: user.username,
               words: options.words,
               comment: options.comment
+            }),
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 200));
+
+          res.status(200).send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Начинаю искать пользователя`,
+            },
+          });
+          break;
+        case 'today':
+          fetch(`${getPath(_req)}/bot_add`, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token,
+              username: user.username,
+              words: options.words,
+              comment: options.comment,
+              day: 'today'
+            }),
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 200));
+
+          res.status(200).send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Начинаю искать пользователя`,
+            },
+          });
+          break;
+        case 'yesterday':
+          fetch(`${getPath(_req)}/bot_add`, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token,
+              username: user.username,
+              words: options.words,
+              comment: options.comment,
+              day: 'yesterday'
             }),
           });
 
