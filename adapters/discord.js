@@ -208,13 +208,31 @@ router.post("/bot_add_two", async (_req, res) => {
       const checkReaction = '\u2705'; // check
       let reaction;
       if (words == 'В') {
-        reaction = '\uD83D\uDCA4'; // zzz
+        reaction = '\uD83D\uDCA4'; // zzz // В 💤
+      }
+      if (words == 34) {
+        reaction = '\uD83C\uDF46'; // 34 🍆
+      }
+      if (words == 42) {
+        reaction = '\uD83E\uDDE3'; // 42 🧣
       }
       if (words == 69 || words == 96 || words === 696 || words === 969) {
-        reaction = '\uD83D\uDE0F'; // zzz
+        reaction = '\uD83D\uDE0F'; // smirk
+      }
+      if (words == 300) {
+        reaction = '\uD83D\uDE9C'; // 300 🚜
+      }
+      if (words == 314) {
+        reaction = '\uD83E\uDD67'; // 314 🥧
+      }
+      if (words == 666) {
+        reaction = '\uD83D\uDE08'; // 666 😈
       }
       if (words >= 1000) {
-        reaction = '\uD83D\uDCAA'; // muscle
+        reaction = '\uD83D\uDCAA'; // muscle // >1000 💪
+      }
+      if (words >= 4000) {
+        reaction = '\uD83E\uDDBE'; // >4000 🦾 
       }
 
       await fetch(
