@@ -12,8 +12,7 @@ const getStat = async (id) => {
     const res = await sheets.spreadsheets.get({
         spreadsheetId: SPREADSHEET_ID,
         includeGridData: true,
-        // ranges: "A3:AI60",
-        ranges: "A3:AA60",
+        ranges: "A3:AC60",
     });
 
     const data = res.data.sheets[0].data[0].rowData;

@@ -52,11 +52,13 @@ router.post("/bot_stat", async (_req, res) => {
       data && data.length > 1
         ? [
           `Запрос от пользователя: ${userId}`,
-          `Пользователь: ${data[0]}`,
+          `Пользователь: **${data[0]}**`,
           `Цель: ${data[1]}`,
-          `Среднее: ${data[data.length - 3]}`,
-          `Общее: ${data[data.length - 2]}`,
-          `Остаток до цели: ${data[data.length - 1]}`,
+          `Среднее: ${data[data.length - 5]}`,
+          `Общее: ${data[data.length - 4]}`,
+          `Остаток до цели: ${data[data.length - 3]}`,
+          `Выходных: ${data[data.length - 2]}`,
+          `Пропусков: ${data[data.length - 1]}`,
         ]
         : [
           `Ничего не найдено для ${typeof userId === "number" ? `айди ` : `пользователя`
