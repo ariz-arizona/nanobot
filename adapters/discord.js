@@ -143,7 +143,7 @@ router.post("/bot_add", async (_req, res) => {
       } else if (day === 'yesterday' && yesterdayReportCondition) {
         throw new Error('no words yesterday');
       }
-      fetch(`${getPath(_req)}/bot_add_two`, {
+      await fetch(`${getPath(_req)}/bot_add_two`, {
         method: "post",
         headers: {
           "Content-Type": "application/json",
