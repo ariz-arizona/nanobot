@@ -68,7 +68,7 @@ router.post("/bot_stat", async (_req, res) => {
     const body = {
       content: text.join("\n"),
     };
-    await sendMsgToDiscord(body, token);
+    await sendMsgToDiscord(body, `${token}/messages/@original`, 'PATCH');
   } catch (error) {
     await sendErrorToDiscord(error, message.token);
   }
@@ -398,8 +398,8 @@ router.post("/discord", async (_req, res) => {
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              flags: InteractionResponseFlags.EPHEMERAL,
-              content: `Начинаю искать статистику`,
+              // flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Пользователь <@${user.id}> запросил статистику`,
             },
           });
 
