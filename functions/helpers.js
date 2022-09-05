@@ -143,4 +143,10 @@ const getReaction = (words) => {
   return reaction;
 }
 
-module.exports = { loadPage, errorMessage, getPath, auth, rows, getPreviousDay, getReaction };
+function getRandomInt(min = 0, max) {
+  min = Math.ceil(min);
+  max = Math.ceil(max);
+  return Math.floor(Math.random() * (max - min) + min);
+}
+
+module.exports = { loadPage, errorMessage, getPath, auth, rows, getPreviousDay, getReaction, getRandomInt };

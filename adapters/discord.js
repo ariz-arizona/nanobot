@@ -7,8 +7,9 @@ const {
   InteractionResponseFlags,
 } = require("discord-interactions");
 const { google } = require("googleapis");
+const emoji = require('emoji.json')
 
-const { errorMessage, getPath, auth, getReaction } = require("../functions/helpers");
+const { errorMessage, getPath, auth, getReaction, getRandomInt } = require("../functions/helpers");
 const { getFreeDates, getUserRow, getStat } = require("../functions/main");
 const help = require('../data/help.json');
 
@@ -32,13 +33,16 @@ const sendErrorToDiscord = async (error, token) => {
 }
 
 const sendMsgToDiscord = async (body, url, method = "POST") => {
+  const content = {
+    headers: { "Content-Type": "application/json" },
+    method: method,
+  };
+  if (body) {
+    content.body = JSON.stringify(body)
+  }
   return await fetch(
     `https://discord.com/api/v9/webhooks/${DISCORD_APPLICATION_ID}/${url}`,
-    {
-      headers: { "Content-Type": "application/json" },
-      method: method,
-      body: JSON.stringify(body),
-    }
+    content
   );
 }
 
@@ -80,6 +84,9 @@ router.post("/bot_add", async (_req, res) => {
   try {
     const { token, words, username, comment, day } = message;
 
+    const originalMsgRaw = await sendMsgToDiscord(false, `${token}/messages/@original`, 'GET');
+    const originalMsg = await originalMsgRaw.json();
+
     const freeDates = await getFreeDates(username);
     freeDates.map((el) => (el.value = [el.value, words].join("_")));
 
@@ -89,7 +96,7 @@ router.post("/bot_add", async (_req, res) => {
       hour: 'numeric'
     }));
     if (currentHour === 24) currentHour = 0;
-    // console.log({currentHour});
+
     const yesterdayReportCondition = (words !== 'В' && currentHour >= 10 && freeDates.length > 1);
     if (yesterdayReportCondition) {
       freeDates.shift();
@@ -101,7 +108,7 @@ router.post("/bot_add", async (_req, res) => {
         type: 2,
         style: freeDates[0].style,
         label: freeDates[0].label,
-        custom_id: `free_date_${freeDates[0].value}`,
+        custom_id: `free_date_${freeDates[0].value}_${originalMsg.id}`,
       });
     }
     if (freeDates[1]) {
@@ -109,7 +116,7 @@ router.post("/bot_add", async (_req, res) => {
         type: 2,
         style: freeDates[1].style,
         label: freeDates[1].label,
-        custom_id: `free_date_${freeDates[1].value}`,
+        custom_id: `free_date_${freeDates[1].value}_${originalMsg.id}`,
       });
     }
 
@@ -173,7 +180,16 @@ router.post("/bot_add", async (_req, res) => {
 router.post("/bot_add_two", async (_req, res) => {
   const message = _req.body;
   try {
-    const { messageData, token, cell, date, words, username, _comment } = message;
+    const {
+      messageData,
+      token,
+      cell,
+      date,
+      words,
+      username,
+      _comment,
+      original_id,
+    } = message;
     let comment;
     if (_comment !== undefined) {
       comment = _comment
@@ -237,11 +253,16 @@ router.post("/bot_add_two", async (_req, res) => {
       const txt = [`Пользователь: **${username}**`, `День: ${date}`, `Слов: ${words}`];
       if (comment) txt.push(`Комментарий: *${comment}*`)
 
-      const response = await sendMsgToDiscord({ content: txt.join('\n') }, token);
-      const msg = await response.json();
-
       const checkReaction = '\u2705'; // check
       const reaction = getReaction(words);
+
+      let response;
+      if (original_id) {
+        response = await sendMsgToDiscord({ content: txt.join('\n') }, `${token}/messages/${original_id}`, 'PATCH');
+      } else {
+        response = await sendMsgToDiscord({ content: txt.join('\n') }, `${token}`);
+      }
+      const msg = await response.json();
 
       await fetch(
         `https://discord.com/api/v9/channels/${msg.channel_id}/messages/${msg.id}/reactions/${checkReaction}/@me`,
@@ -259,6 +280,8 @@ router.post("/bot_add_two", async (_req, res) => {
           }
         );
       }
+      const randomEmoji = emoji[getRandomInt(0, emoji.length - 1)];
+      await sendMsgToDiscord({ content: `Случайный смайлик от бота ${randomEmoji.char}` }, `${token}/messages/@original`, 'PATCH');
     }
   } catch (error) {
     await sendErrorToDiscord(error, message.token);
@@ -423,8 +446,8 @@ router.post("/discord", async (_req, res) => {
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              flags: InteractionResponseFlags.EPHEMERAL,
-              content: `Начинаю искать пользователя`,
+              // flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Пользователь <@${user.id}> пишет отчет`,
             },
           });
           break;
@@ -448,8 +471,8 @@ router.post("/discord", async (_req, res) => {
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              flags: InteractionResponseFlags.EPHEMERAL,
-              content: `Начинаю искать пользователя`,
+              // flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Пользователь <@${user.id}> пишет отчет за сегодня`,
             },
           });
           break;
@@ -473,8 +496,8 @@ router.post("/discord", async (_req, res) => {
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              flags: InteractionResponseFlags.EPHEMERAL,
-              content: `Начинаю искать пользователя`,
+              // flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Пользователь <@${user.id}> пишет отчет за вчера`,
             },
           });
           break;
@@ -483,6 +506,7 @@ router.post("/discord", async (_req, res) => {
           options.cell = args[0];
           options.date = args[1];
           options.words = args[2];
+          options.original_id = args[3];
           fetch(`${getPath(_req)}/bot_add_two`, {
             method: "post",
             headers: {
@@ -495,6 +519,7 @@ router.post("/discord", async (_req, res) => {
               cell: options.cell,
               date: options.date,
               words: options.words,
+              original_id: options.original_id,
             }),
           });
 
@@ -503,8 +528,8 @@ router.post("/discord", async (_req, res) => {
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              flags: InteractionResponseFlags.EPHEMERAL,
-              content: `Начинаю добавлять данные`,
+              // flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Пользователь ${user.username} нажал на кнопку`,
             },
           });
           break;
@@ -532,7 +557,6 @@ router.post("/discord", async (_req, res) => {
               content: `Начинаю добавлять пользователя`,
             },
           });
-          break;
           break;
         default:
           res.status(200).send({
