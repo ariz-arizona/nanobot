@@ -197,27 +197,32 @@ router.post("/bot_add_two", async (_req, res) => {
       const commentRaw = messageData.content.split('\n').find(el => el.split(': ')[0] === 'Комментарий');
       comment = commentRaw ? commentRaw.split(': ')[1] : false;
     }
-
-    const body = {
-      flags: InteractionResponseFlags.EPHEMERAL,
-      content: `Пользователь ${username} готов вписать слова (${words}) в дату ${date}`,
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 2,
-              style: 2,
-              label: `${words} слов в день ${date}`,
-              custom_id: `free_date_${cell}_${date}`,
-              disabled: true
-            },
-          ],
-        },
-      ],
-    };
+    // console.log({ messageData, original_id });
+    // исправляем сообщение с кнопками, если данные о нем переданы
     if (messageData) {
+      const body = {
+        flags: InteractionResponseFlags.EPHEMERAL,
+        content: `Пользователь ${username} готов вписать слова (${words}) в дату ${date}`,
+        components: [
+          {
+            type: 1,
+            components: [
+              {
+                type: 2,
+                style: 2,
+                label: `${words} слов в день ${date}`,
+                custom_id: `free_date_${cell}_${date}`,
+                disabled: true
+              },
+            ],
+          },
+        ],
+      };
       await sendMsgToDiscord(body, `${token}/messages/${messageData.id}`, 'PATCH');
+    }
+    // если есть оригинальное сообщение, то есть после кнопки, то удаляем сообщение-после-кнопки
+    if (original_id) {
+      await sendMsgToDiscord(false, `${token}/messages/@original`, 'DELETE');
     }
 
     const sheets = google.sheets({
@@ -238,6 +243,7 @@ router.post("/bot_add_two", async (_req, res) => {
         flags: InteractionResponseFlags.EPHEMERAL,
         content: ['Кажется, такой отчет уже сдан :(', `День: ${date}`, `Слов: ${words}`].join('\n'),
       };
+      await sendMsgToDiscord(false, `${token}/messages/${original_id}`, 'DELETE');
       await sendMsgToDiscord(duplicateBody, token);
     } else {
       const jwt = await auth();
@@ -250,7 +256,9 @@ router.post("/bot_add_two", async (_req, res) => {
         resource: { values: [[words]] },
       });
 
+      const randomEmoji = emoji[getRandomInt(0, emoji.length - 1)];
       const txt = [`Пользователь: **${username}**`, `День: ${date}`, `Слов: ${words}`];
+      txt.push(`Случайный эмоджи от бота: ${randomEmoji.char}`);
       if (comment) txt.push(`Комментарий: *${comment}*`)
 
       const checkReaction = '\u2705'; // check
@@ -260,7 +268,7 @@ router.post("/bot_add_two", async (_req, res) => {
       if (original_id) {
         response = await sendMsgToDiscord({ content: txt.join('\n') }, `${token}/messages/${original_id}`, 'PATCH');
       } else {
-        response = await sendMsgToDiscord({ content: txt.join('\n') }, `${token}`);
+        response = await sendMsgToDiscord({ content: txt.join('\n') }, `${token}/messages/@original`, 'PATCH');
       }
       const msg = await response.json();
 
@@ -280,8 +288,6 @@ router.post("/bot_add_two", async (_req, res) => {
           }
         );
       }
-      const randomEmoji = emoji[getRandomInt(0, emoji.length - 1)];
-      await sendMsgToDiscord({ content: `Случайный смайлик от бота ${randomEmoji.char}` }, `${token}/messages/@original`, 'PATCH');
     }
   } catch (error) {
     await sendErrorToDiscord(error, message.token);
