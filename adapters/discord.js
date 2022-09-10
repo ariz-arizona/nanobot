@@ -243,7 +243,7 @@ router.post("/bot_add_two", async (_req, res) => {
         flags: InteractionResponseFlags.EPHEMERAL,
         content: ['Кажется, такой отчет уже сдан :(', `День: ${date}`, `Слов: ${words}`].join('\n'),
       };
-      await sendMsgToDiscord(false, `${token}/messages/${original_id}`, 'DELETE');
+      // await sendMsgToDiscord(false, `${token}/messages/${original_id}`, 'DELETE');
       await sendMsgToDiscord(duplicateBody, token);
     } else {
       const jwt = await auth();
