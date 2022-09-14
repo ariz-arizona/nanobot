@@ -3,10 +3,10 @@
 // npm install discord.js
 require("dotenv").config();
 
-// const { DISCORD_APPLICATION_ID, DISCORD_TOKEN } = process.env;
-const DISCORD_TOKEN =
-  "MTAwNjk0ODI1NTE4MTA1ODA3OA.GgHCof.8HYbpzMllrTfqlFu6SsHiZRW8kmYwbEefeCqg0";
-const DISCORD_APPLICATION_ID = "1006948255181058078";
+const { DISCORD_APPLICATION_ID, DISCORD_TOKEN } = process.env;
+// const DISCORD_TOKEN =
+//   "MTAwNjk0ODI1NTE4MTA1ODA3OA.GgHCof.8HYbpzMllrTfqlFu6SsHiZRW8kmYwbEefeCqg0";
+// const DISCORD_APPLICATION_ID = "1006948255181058078";
 
 const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v9");
@@ -85,6 +85,11 @@ const commands = [
         type: 4,
         name: "target",
         description: "target"
+      },
+      {
+        type: 3,
+        name: "name",
+        description: "name"
       },
     ],
   },

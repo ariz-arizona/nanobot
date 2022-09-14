@@ -299,32 +299,34 @@ router.post("/bot_add_user", async (_req, res) => {
   try {
     const { token, userId, username, target } = message;
 
-    const rowIndex = await getUserRow(username);
+    const rowIndex = await getUserRow(userId);
     const freeRow = rowIndex.free + 4;
+    if (!rowIndex.usernames.includes(username)) {
+      const sheets = google.sheets({
+        version: "v4",
+        auth: GOOGLE_API_KEY,
+      });
 
-    if (rowIndex.index !== -1) {
-      throw new Error('user exist')
+      const jwt = await auth();
+
+      sheets.spreadsheets.values.update({
+        auth: jwt,
+        spreadsheetId: SPREADSHEET_ID,
+        range: `Список участников!A${freeRow}:C${freeRow}`,
+        valueInputOption: "USER_ENTERED",
+        resource: { values: [[userId, username, target]] },
+      });
+
+      const body = {
+        content: [`Пользователь: ${username}`, `Цель: ${target}`].join('\n'),
+      };
+      await sendMsgToDiscord(body, token);
+    } else {
+      const body = {
+        content: `В таблице уже есть запись для ${username}`
+      }
+      await sendMsgToDiscord(body, `${token}/messages/@original`, 'PATCH');
     }
-
-    const sheets = google.sheets({
-      version: "v4",
-      auth: GOOGLE_API_KEY,
-    });
-
-    const jwt = await auth();
-
-    sheets.spreadsheets.values.update({
-      auth: jwt,
-      spreadsheetId: SPREADSHEET_ID,
-      range: `Список участников!A${freeRow}:C${freeRow}`,
-      valueInputOption: "USER_ENTERED",
-      resource: { values: [[userId, username, target]] },
-    });
-
-    const body = {
-      content: [`Пользователь: ${username}`, `Цель: ${target}`].join('\n'),
-    };
-    await sendMsgToDiscord(body, token);
   } catch (error) {
     await sendErrorToDiscord(error, message.token);
   }
@@ -541,7 +543,7 @@ router.post("/discord", async (_req, res) => {
             body: JSON.stringify({
               token,
               userId: user.id,
-              username: user.username,
+              username: options.name || user.username,
               target: options.target,
             }),
           });
@@ -551,8 +553,8 @@ router.post("/discord", async (_req, res) => {
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              flags: InteractionResponseFlags.EPHEMERAL,
-              content: `Начинаю добавлять пользователя`,
+              // flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Пользователь <@${user.id}> регистрируется на пендель`,
             },
           });
           break;

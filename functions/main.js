@@ -84,7 +84,7 @@ const getFreeDates = async (username) => {
     return freeDates;
 };
 
-const getUserRow = async (username) => {
+const getUserRow = async (id) => {
     const sheets = google.sheets({
         version: "v4",
         auth: GOOGLE_API_KEY,
@@ -92,17 +92,17 @@ const getUserRow = async (username) => {
     const res = await sheets.spreadsheets.get({
         spreadsheetId: SPREADSHEET_ID,
         includeGridData: true,
-        ranges: "A3:A60",
+        ranges: "A4:B60",
     });
     const data = res.data.sheets[0].data[0].rowData;
-    const findIndex = data.findIndex((el) => {
-        return el.values[0].formattedValue === username;
-    });
+    const findUsernames = data.map((el) => {
+        return el.values[0].formattedValue === id ? el.values[1].formattedValue : '';
+    }).filter(String);
     const findFree = data.findIndex((el) => {
         return !el.values[0].formattedValue;
     });
 
-    return { index: findIndex, free: findFree };
+    return { usernames: findUsernames, free: findFree };
 }
 
 module.exports = { getStat, getFreeDates, getUserRow }
