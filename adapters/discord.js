@@ -320,7 +320,7 @@ router.post("/bot_add_user", async (_req, res) => {
       const body = {
         content: [`Пользователь: ${username}`, `Цель: ${target}`].join('\n'),
       };
-      await sendMsgToDiscord(body, token);
+      await sendMsgToDiscord(body, `${token}/messages/@original`, 'PATCH');
     } else {
       const body = {
         content: `В таблице уже есть запись для ${username}`
