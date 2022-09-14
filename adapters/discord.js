@@ -297,10 +297,10 @@ router.post("/bot_add_two", async (_req, res) => {
 router.post("/bot_add_user", async (_req, res) => {
   const message = _req.body;
   try {
-    const { token, target, username } = message;
+    const { token, userId, username, target } = message;
 
     const rowIndex = await getUserRow(username);
-    const freeRow = rowIndex.free + 3;
+    const freeRow = rowIndex.free + 4;
 
     if (rowIndex.index !== -1) {
       throw new Error('user exist')
@@ -316,17 +316,9 @@ router.post("/bot_add_user", async (_req, res) => {
     sheets.spreadsheets.values.update({
       auth: jwt,
       spreadsheetId: SPREADSHEET_ID,
-      range: `Список участников!A${freeRow}`,
+      range: `Список участников!A${freeRow}:C${freeRow}`,
       valueInputOption: "USER_ENTERED",
-      resource: { values: [[username]] },
-    });
-
-    sheets.spreadsheets.values.update({
-      auth: jwt,
-      spreadsheetId: SPREADSHEET_ID,
-      range: `Список участников!B${freeRow}`,
-      valueInputOption: "USER_ENTERED",
-      resource: { values: [[target]] },
+      resource: { values: [[userId, username, target]] },
     });
 
     const body = {
@@ -548,6 +540,7 @@ router.post("/discord", async (_req, res) => {
             },
             body: JSON.stringify({
               token,
+              userId: user.id,
               username: user.username,
               target: options.target,
             }),
