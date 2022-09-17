@@ -82,12 +82,38 @@ router.post("/bot_stat", async (_req, res) => {
 router.post("/bot_add", async (_req, res) => {
   const message = _req.body;
   try {
-    const { token, words, username, comment, day } = message;
+    const { token, words, userId, username, comment, day, original_id } = message;
 
     const originalMsgRaw = await sendMsgToDiscord(false, `${token}/messages/@original`, 'GET');
     const originalMsg = await originalMsgRaw.json();
 
-    const freeDates = await getFreeDates(username);
+    const freeDates = await getFreeDates(userId);
+    if (freeDates.length > 1) {
+      const body = {
+        flags: InteractionResponseFlags.EPHEMERAL,
+        content: 'Найдено несколько пользователей',
+        components: [
+          {
+            type: 1,
+            components: [
+              {
+                type: 3,
+                custom_id: "add_words_user",
+                options: freeDates.map(el => {
+                  return {
+                    label: el.name,
+                    value: `${el.name}_${originalMsg.id}`
+                  }
+                })
+              }
+            ],
+          },
+        ],
+      };
+      await sendMsgToDiscord(body, token);
+    } else {
+
+    }
     freeDates.map((el) => (el.value = [el.value, words].join("_")));
 
     let currentHour = parseInt(new Date().toLocaleString("en-US", {
@@ -122,7 +148,7 @@ router.post("/bot_add", async (_req, res) => {
 
     const txt = buttons.length ?
       [
-        `Пользователь: ${username}`,
+        `Пользователь: ${userId}`,
         `Слов: ${words}`,
       ] :
       ['Свободных дат не найдено'];
@@ -434,7 +460,7 @@ router.post("/discord", async (_req, res) => {
             },
             body: JSON.stringify({
               token,
-              username: user.username,
+              userId: user.id,
               words: options.words,
               comment: options.comment
             }),
@@ -450,6 +476,22 @@ router.post("/discord", async (_req, res) => {
             },
           });
           break;
+          case 'add_words_user':
+            const username = message.data.values[0].split('_')[0];
+            const original_id = message.data.values[0].split('_')[1];
+            fetch(`${getPath(_req)}/bot_add`, {
+              method: "post",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                token,
+                userId: user.id,
+                username: username,
+                original_id
+              }),
+            });
+            break;
         case 'today':
           fetch(`${getPath(_req)}/bot_add`, {
             method: "post",
