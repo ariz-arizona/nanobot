@@ -338,9 +338,9 @@ router.post("/bot_add_user", async (_req, res) => {
       sheets.spreadsheets.values.update({
         auth: jwt,
         spreadsheetId: SPREADSHEET_ID,
-        range: `Список участников!A${freeRow}:C${freeRow}`,
+        range: `Список участников!A${freeRow}:D${freeRow}`,
         valueInputOption: "USER_ENTERED",
-        resource: { values: [[userId, username, target]] },
+        resource: { values: [[userId, username, target, 6]] },
       });
 
       const body = {
