@@ -5,7 +5,7 @@ require("dotenv").config();
 
 // const { DISCORD_APPLICATION_ID, DISCORD_TOKEN } = process.env;
 const DISCORD_TOKEN =
-  "MTAwNjk0ODI1NTE4MTA1ODA3OA.GkTZlP.vDbnYykzNg-8R0VEA5DP70WaMAzKnpYGjVGf9s";
+  "УКАЖИ ТОКЕН И НЕ СОХРАНЯЙ";
 const DISCORD_APPLICATION_ID = "1006948255181058078";
 
 const { REST } = require("@discordjs/rest");
