@@ -12,30 +12,22 @@ const getStat = async (id) => {
     const res = await sheets.spreadsheets.get({
         spreadsheetId: SPREADSHEET_ID,
         includeGridData: true,
-        ranges: "A3:AE60",
+        ranges: "A4:AO60",
     });
 
     const data = res.data.sheets[0].data[0].rowData;
 
     let selectedId = id;
 
-    if (typeof id === "number") {
-        if (id < 0) id = 0;
-        if (id > 50) id = 50;
-    }
+    const findUsernames = data.map((el, index) => {
+        return el.values[0].formattedValue === id ? index : '';
+    }).filter(String);
 
-    if (typeof id === "string") {
-        const findIndex = data.findIndex((el) => {
-            return el.values[0].formattedValue === id;
-        });
-        if (findIndex) selectedId = findIndex;
-    }
-
-    if (!data[selectedId] || !data[selectedId].values[0].formattedValue) {
+    if (!findUsernames.length) {
         throw new Error(`user not found|${id}`);
     }
 
-    const values = data[selectedId].values.map((el) => el.formattedValue);
+    const values = findUsernames.map(el => data[el].values.map((el) => el.formattedValue));
     return values;
 };
 

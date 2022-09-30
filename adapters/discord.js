@@ -52,25 +52,23 @@ router.post("/bot_stat", async (_req, res) => {
     const { token, userId } = message;
 
     const data = await getStat(userId);
-    const text =
-      data && data.length > 1
-        ? [
-          `Запрос от пользователя: ${userId}`,
-          `Пользователь: **${data[0]}**`,
-          `Цель: ${data[1]}`,
-          `Среднее: ${data[data.length - 5]}`,
-          `Общее: ${data[data.length - 4]}`,
-          `Остаток до цели: ${data[data.length - 3]}`,
-          `Выходных: ${data[data.length - 2]}`,
-          `Пропусков: ${data[data.length - 1]}`,
-        ]
-        : [
-          `Ничего не найдено для ${typeof userId === "number" ? `айди ` : `пользователя`
-          } ${userId}`,
-        ];
+    const text = [];
+
+    data.map(el => {
+      const l = el.length;
+      const item =
+        el && el.length > 1
+          ? [
+            `**${el[1]}**, цель: ${el[2]}, в среднем ${el[l - 5]}`,
+            `Всего написано ${el[l - 4]}, до цели осталось ${el[l - 3]}`,
+            `Выходных: ${el[l - 2]}, пропусков: ${el[l - 1]}`,
+          ]
+          : [`Ничего не найдено для ${userId}`];
+      text.push(item.join('\n'));
+    });
 
     const body = {
-      content: text.join("\n"),
+      content: text.join("\n\n"),
     };
     await sendMsgToDiscord(body, `${token}/messages/@original`, 'PATCH');
   } catch (error) {
@@ -428,17 +426,12 @@ router.post("/discord", async (_req, res) => {
 
           break;
         case "stat":
-          const userId =
-            options.id && !isNaN(parseInt(options.id))
-              ? parseInt(options.id)
-              : user.username;
-
           fetch(`${getPath(_req)}/bot_stat`, {
             method: "post",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ token, userId }),
+            body: JSON.stringify({ token, userId: user.id }),
           });
 
           await new Promise((resolve) => setTimeout(resolve, 200));
@@ -476,22 +469,22 @@ router.post("/discord", async (_req, res) => {
             },
           });
           break;
-          case 'add_words_user':
-            const username = message.data.values[0].split('_')[0];
-            const original_id = message.data.values[0].split('_')[1];
-            fetch(`${getPath(_req)}/bot_add`, {
-              method: "post",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                token,
-                userId: user.id,
-                username: username,
-                original_id
-              }),
-            });
-            break;
+        case 'add_words_user':
+          const username = message.data.values[0].split('_')[0];
+          const original_id = message.data.values[0].split('_')[1];
+          fetch(`${getPath(_req)}/bot_add`, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token,
+              userId: user.id,
+              username: username,
+              original_id
+            }),
+          });
+          break;
         case 'today':
           fetch(`${getPath(_req)}/bot_add`, {
             method: "post",

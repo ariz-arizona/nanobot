@@ -17,14 +17,7 @@ const commands = [
     description: "help",
   },{
     name: "stat",
-    description: "Получить статистику пользователя",
-    options: [
-      {
-        type: 4,
-        name: "id",
-        description: "user id"
-      },
-    ],
+    description: "Получить статистику пользователя"
   },
   {
     name: "add",
