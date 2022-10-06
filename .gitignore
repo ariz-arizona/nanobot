@@ -2,4 +2,4 @@
 .env
 prod.env
 .vercel
-command.js
+commands.js
