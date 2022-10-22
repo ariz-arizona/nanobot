@@ -91,116 +91,105 @@ router.post("/bot_add", async (_req, res) => {
     if (username) {
       freeDates = freeDates.filter(el => el.name === username);
     }
-    if (freeDates.length > 1) {
-      const body = {
-        content: `Коментарий: ${comment}\nНайдено несколько пользователей`,
-        components: [
-          {
-            type: 1,
-            components: [
-              {
-                type: 3,
-                custom_id: "add_words_user",
-                options: freeDates.map(el => {
-                  return {
-                    label: el.name,
-                    value: [el.name, words, day].join('_')
-                  }
-                })
-              }
-            ],
-          },
-        ],
-      };
-      await sendMsgToDiscord(body, `${token}/messages/${originalMsg.id}`, 'PATCH');
-    } else {
-      freeDates = freeDates[0].dates;
-      freeDates.map((el) => (el.value = [el.value, words].join("_")));
 
-      let currentHour = parseInt(new Date().toLocaleString("en-US", {
-        timeZone: "Europe/Moscow",
-        hour12: false,
-        hour: 'numeric'
-      }));
-      if (currentHour === 24) currentHour = 0;
+    let currentHour = parseInt(new Date().toLocaleString("en-US", {
+      timeZone: "Europe/Moscow",
+      hour12: false,
+      hour: 'numeric'
+    }));
+    if (currentHour === 24) currentHour = 0;
 
-      const yesterdayReportCondition = (words !== 'В' && currentHour >= 10 && freeDates.length > 1);
-      if (yesterdayReportCondition) {
-        freeDates.shift();
-      }
+    const buttonsArray = [];
 
+    for (let index = 0; index < freeDates.length; index++) {
       const buttons = [];
-      if (freeDates[0]) {
+
+      const dates = freeDates[index].dates;
+      const name = freeDates[index].name;
+      dates.map((el) => {
+        el.value = [el.value, words].join("_");
+        el.label = `${el.label} (${name})`
+      });
+
+      const yesterdayReportCondition = (words !== 'В' && currentHour >= 10 && dates.length > 1);
+      if (yesterdayReportCondition) {
+        dates.shift();
+      }
+
+      if (dates[0]) {
         buttons.push({
           type: 2,
-          style: freeDates[0].style,
-          label: freeDates[0].label,
-          custom_id: `free_date_${freeDates[0].value}_${originalMsg.id}`,
+          style: dates[0].style,
+          label: dates[0].label,
+          custom_id: `free_date_${dates[0].value}_${originalMsg.id}`,
         });
       }
-      if (freeDates[1]) {
+      if (dates[1]) {
         buttons.push({
           type: 2,
-          style: freeDates[1].style,
-          label: freeDates[1].label,
-          custom_id: `free_date_${freeDates[1].value}_${originalMsg.id}`,
+          style: dates[1].style,
+          label: dates[1].label,
+          custom_id: `free_date_${dates[1].value}_${originalMsg.id}`,
         });
       }
 
-      const txt = buttons.length ?
-        [
-          `Пользователь: ${userId}`,
-          `Слов: ${words}`,
-        ] :
-        ['Свободных дат не найдено'];
-
-      if (buttons.length) {
-        if (comment) {
-          txt.push(`Комментарий: ${comment || ''}`);
-        }
-        txt.push(`Укажите дату:`);
-      }
-      
-      if (day && ['yesterday', 'today'].includes(day)) {
-        const body = {
-          token,
-          _comment: comment || false,
-          username: username,
-          date: day,
-          words: words,
-        };
-
-        if (day === 'today') {
-          body.cell = freeDates[freeDates.length - 1].value.split('_')[0];
-        } else if (day === 'yesterday' && !yesterdayReportCondition) {
-          body.cell = freeDates[0].value.split('_')[0];
-        } else if (day === 'yesterday' && yesterdayReportCondition) {
-          throw new Error('no words yesterday');
-        }
-        await fetch(`${getPath(_req)}/bot_add_two`, {
-          method: "post",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        });
-      } else {
-        const body = {
-          flags: InteractionResponseFlags.EPHEMERAL,
-          content: txt.join('\n'),
-          components: buttons.length ? [
-            {
-              type: 1,
-              components: buttons,
-            },
-          ] : [],
-        };
-        console.log(body.components[0].components)
-
-        const r = await sendMsgToDiscord(body, token);
-        console.log(await r.json())
-      }
+      if (buttons.length) buttonsArray.push({
+        type: 1,
+        components: buttons,
+      })
     }
+    const txt = buttonsArray.length ?
+      [
+        `Пользователь: ${freeDates.map(el => el.name).join(', ')}`,
+        `Слов: ${words}`,
+      ] :
+      ['Свободных дат не найдено'];
+
+    if (buttonsArray.length) {
+      if (comment) {
+        txt.push(`Комментарий: ${comment || ''}`);
+      }
+      txt.push(`Укажите дату:`);
+    }
+
+    if (day && ['yesterday', 'today'].includes(day)) {
+      const dates = freeDates[0].dates;
+      const name = freeDates[0].name;
+      const yesterdayReportCondition = (words !== 'В' && currentHour >= 10 && dates.length > 1);
+
+      const body = {
+        token,
+        _comment: comment || false,
+        username: name,
+        date: day,
+        words: words,
+      };
+
+      if (day === 'today') {
+        body.cell = dates[dates.length - 1].value.split('_')[0];
+      } else if (day === 'yesterday' && !yesterdayReportCondition) {
+        body.cell = dates[0].value.split('_')[0];
+      } else if (day === 'yesterday' && yesterdayReportCondition) {
+        throw new Error('no words yesterday');
+      }
+
+      await fetch(`${getPath(_req)}/bot_add_two`, {
+        method: "post",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    } else {
+      const body = {
+        flags: InteractionResponseFlags.EPHEMERAL,
+        content: txt.join('\n'),
+        components: buttonsArray
+      };
+
+      await sendMsgToDiscord(body, token);
+    }
+
   } catch (error) {
     await sendErrorToDiscord(error, message.token);
   }
