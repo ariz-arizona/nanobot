@@ -5,7 +5,7 @@ require("dotenv").config();
 
 // const { DISCORD_APPLICATION_ID, DISCORD_TOKEN } = process.env;
 const DISCORD_TOKEN =
-  "MTAwNjk0ODI1NTE4MTA1ODA3OA.GlL0mJ.Fp7dW8NSl2Oy4byWd09anUFGSNsiinon3idzEY";
+  "УКАЖИ ТОКЕН И НЕ СОХРАНЯЙ";
 const DISCORD_APPLICATION_ID = "1006948255181058078";
 
 const { REST } = require("@discordjs/rest");
@@ -17,14 +17,7 @@ const commands = [
     description: "help",
   },{
     name: "stat",
-    description: "Получить статистику пользователя",
-    options: [
-      {
-        type: 4,
-        name: "id",
-        description: "user id"
-      },
-    ],
+    description: "Получить статистику пользователя"
   },
   {
     name: "add",
@@ -85,6 +78,11 @@ const commands = [
         type: 4,
         name: "target",
         description: "target"
+      },
+      {
+        type: 3,
+        name: "name",
+        description: "name"
       },
     ],
   },

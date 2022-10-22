@@ -32,13 +32,16 @@ const sendErrorToDiscord = async (error, token) => {
   );
 }
 
-const sendMsgToDiscord = async (body, url, method = "POST") => {
+const sendMsgToDiscord = async (body, url, method = "POST", auth = false) => {
   const content = {
     headers: { "Content-Type": "application/json" },
     method: method,
   };
   if (body) {
     content.body = JSON.stringify(body)
+  }
+  if (auth) {
+    content.headers.authorization = `Bot ${DISCORD_TOKEN}`;
   }
   return await fetch(
     `https://discord.com/api/v9/webhooks/${DISCORD_APPLICATION_ID}/${url}`,
@@ -52,25 +55,23 @@ router.post("/bot_stat", async (_req, res) => {
     const { token, userId } = message;
 
     const data = await getStat(userId);
-    const text =
-      data && data.length > 1
-        ? [
-          `Запрос от пользователя: ${userId}`,
-          `Пользователь: **${data[0]}**`,
-          `Цель: ${data[1]}`,
-          `Среднее: ${data[data.length - 5]}`,
-          `Общее: ${data[data.length - 4]}`,
-          `Остаток до цели: ${data[data.length - 3]}`,
-          `Выходных: ${data[data.length - 2]}`,
-          `Пропусков: ${data[data.length - 1]}`,
-        ]
-        : [
-          `Ничего не найдено для ${typeof userId === "number" ? `айди ` : `пользователя`
-          } ${userId}`,
-        ];
+    const text = [];
+
+    data.map(el => {
+      const l = el.length;
+      const item =
+        el && el.length > 1
+          ? [
+            `**${el[1]}**, цель: ${el[2]}, в среднем ${el[l - 5]}`,
+            `Всего написано ${el[l - 4]}, до цели осталось ${el[l - 3]}`,
+            `Выходных: ${el[l - 2]}, пропусков: ${el[l - 1]}`,
+          ]
+          : [`Ничего не найдено для ${userId}`];
+      text.push(item.join('\n'));
+    });
 
     const body = {
-      content: text.join("\n"),
+      content: text.join("\n\n"),
     };
     await sendMsgToDiscord(body, `${token}/messages/@original`, 'PATCH');
   } catch (error) {
@@ -82,13 +83,14 @@ router.post("/bot_stat", async (_req, res) => {
 router.post("/bot_add", async (_req, res) => {
   const message = _req.body;
   try {
-    const { token, words, username, comment, day } = message;
-
+    const { token, words, userId, username, comment, day } = message;
     const originalMsgRaw = await sendMsgToDiscord(false, `${token}/messages/@original`, 'GET');
     const originalMsg = await originalMsgRaw.json();
 
-    const freeDates = await getFreeDates(username);
-    freeDates.map((el) => (el.value = [el.value, words].join("_")));
+    let freeDates = await getFreeDates(userId);
+    if (username) {
+      freeDates = freeDates.filter(el => el.name === username);
+    }
 
     let currentHour = parseInt(new Date().toLocaleString("en-US", {
       timeZone: "Europe/Moscow",
@@ -97,59 +99,80 @@ router.post("/bot_add", async (_req, res) => {
     }));
     if (currentHour === 24) currentHour = 0;
 
-    const yesterdayReportCondition = (words !== 'В' && currentHour >= 10 && freeDates.length > 1);
-    if (yesterdayReportCondition) {
-      freeDates.shift();
-    }
+    const buttonsArray = [];
 
-    const buttons = [];
-    if (freeDates[0]) {
-      buttons.push({
-        type: 2,
-        style: freeDates[0].style,
-        label: freeDates[0].label,
-        custom_id: `free_date_${freeDates[0].value}_${originalMsg.id}`,
-      });
-    }
-    if (freeDates[1]) {
-      buttons.push({
-        type: 2,
-        style: freeDates[1].style,
-        label: freeDates[1].label,
-        custom_id: `free_date_${freeDates[1].value}_${originalMsg.id}`,
-      });
-    }
+    for (let index = 0; index < freeDates.length; index++) {
+      const buttons = [];
 
-    const txt = buttons.length ?
+      const dates = freeDates[index].dates;
+      const name = freeDates[index].name;
+      dates.map((el) => {
+        el.value = [el.value, words].join("_");
+        el.label = `${el.label} (${name})`
+      });
+
+      const yesterdayReportCondition = (words !== 'В' && currentHour >= 10 && dates.length > 1);
+      if (yesterdayReportCondition) {
+        dates.shift();
+      }
+
+      if (dates[0]) {
+        buttons.push({
+          type: 2,
+          style: dates[0].style,
+          label: dates[0].label,
+          custom_id: `free_date_${dates[0].value}_${originalMsg.id}`,
+        });
+      }
+      if (dates[1]) {
+        buttons.push({
+          type: 2,
+          style: dates[1].style,
+          label: dates[1].label,
+          custom_id: `free_date_${dates[1].value}_${originalMsg.id}`,
+        });
+      }
+
+      if (buttons.length) buttonsArray.push({
+        type: 1,
+        components: buttons,
+      })
+    }
+    const txt = buttonsArray.length ?
       [
-        `Пользователь: ${username}`,
+        `Пользователь: ${freeDates.map(el => el.name).join(', ')}`,
         `Слов: ${words}`,
       ] :
       ['Свободных дат не найдено'];
 
-    if (buttons.length) {
+    if (buttonsArray.length) {
       if (comment) {
         txt.push(`Комментарий: ${comment || ''}`);
       }
       txt.push(`Укажите дату:`);
     }
 
-    if (day) {
+    if (day && ['yesterday', 'today'].includes(day)) {
+      const dates = freeDates[0].dates;
+      const name = freeDates[0].name;
+      const yesterdayReportCondition = (words !== 'В' && currentHour >= 10 && dates.length > 1);
+
       const body = {
         token,
         _comment: comment || false,
-        username: username,
+        username: name,
         date: day,
         words: words,
       };
-      // console.log(freeDates);
+
       if (day === 'today') {
-        body.cell = freeDates[freeDates.length - 1].value.split('_')[0];
+        body.cell = dates[dates.length - 1].value.split('_')[0];
       } else if (day === 'yesterday' && !yesterdayReportCondition) {
-        body.cell = freeDates[0].value.split('_')[0];
+        body.cell = dates[0].value.split('_')[0];
       } else if (day === 'yesterday' && yesterdayReportCondition) {
         throw new Error('no words yesterday');
       }
+
       await fetch(`${getPath(_req)}/bot_add_two`, {
         method: "post",
         headers: {
@@ -161,16 +184,12 @@ router.post("/bot_add", async (_req, res) => {
       const body = {
         flags: InteractionResponseFlags.EPHEMERAL,
         content: txt.join('\n'),
-        components: buttons.length ? [
-          {
-            type: 1,
-            components: buttons,
-          },
-        ] : [],
+        components: buttonsArray
       };
 
       await sendMsgToDiscord(body, token);
     }
+
   } catch (error) {
     await sendErrorToDiscord(error, message.token);
   }
@@ -297,42 +316,36 @@ router.post("/bot_add_two", async (_req, res) => {
 router.post("/bot_add_user", async (_req, res) => {
   const message = _req.body;
   try {
-    const { token, target, username } = message;
+    const { token, userId, username, target } = message;
 
-    const rowIndex = await getUserRow(username);
-    const freeRow = rowIndex.free + 3;
+    const rowIndex = await getUserRow(userId);
+    const freeRow = rowIndex.free + 4;
+    if (!rowIndex.usernames.includes(username)) {
+      const sheets = google.sheets({
+        version: "v4",
+        auth: GOOGLE_API_KEY,
+      });
 
-    if (rowIndex.index !== -1) {
-      throw new Error('user exist')
+      const jwt = await auth();
+
+      sheets.spreadsheets.values.update({
+        auth: jwt,
+        spreadsheetId: SPREADSHEET_ID,
+        range: `Список участников!A${freeRow}:D${freeRow}`,
+        valueInputOption: "USER_ENTERED",
+        resource: { values: [[userId, username, target, 6]] },
+      });
+
+      const body = {
+        content: [`Пользователь: ${username}`, `Цель: ${target}`].join('\n'),
+      };
+      await sendMsgToDiscord(body, `${token}/messages/@original`, 'PATCH');
+    } else {
+      const body = {
+        content: `В таблице уже есть запись для ${username}`
+      }
+      await sendMsgToDiscord(body, `${token}/messages/@original`, 'PATCH');
     }
-
-    const sheets = google.sheets({
-      version: "v4",
-      auth: GOOGLE_API_KEY,
-    });
-
-    const jwt = await auth();
-
-    sheets.spreadsheets.values.update({
-      auth: jwt,
-      spreadsheetId: SPREADSHEET_ID,
-      range: `Список участников!A${freeRow}`,
-      valueInputOption: "USER_ENTERED",
-      resource: { values: [[username]] },
-    });
-
-    sheets.spreadsheets.values.update({
-      auth: jwt,
-      spreadsheetId: SPREADSHEET_ID,
-      range: `Список участников!B${freeRow}`,
-      valueInputOption: "USER_ENTERED",
-      resource: { values: [[target]] },
-    });
-
-    const body = {
-      content: [`Пользователь: ${username}`, `Цель: ${target}`].join('\n'),
-    };
-    await sendMsgToDiscord(body, token);
   } catch (error) {
     await sendErrorToDiscord(error, message.token);
   }
@@ -408,17 +421,12 @@ router.post("/discord", async (_req, res) => {
 
           break;
         case "stat":
-          const userId =
-            options.id && !isNaN(parseInt(options.id))
-              ? parseInt(options.id)
-              : user.username;
-
           fetch(`${getPath(_req)}/bot_stat`, {
             method: "post",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ token, userId }),
+            body: JSON.stringify({ token, userId: user.id }),
           });
 
           await new Promise((resolve) => setTimeout(resolve, 200));
@@ -440,7 +448,7 @@ router.post("/discord", async (_req, res) => {
             },
             body: JSON.stringify({
               token,
-              username: user.username,
+              userId: user.id,
               words: options.words,
               comment: options.comment
             }),
@@ -456,6 +464,25 @@ router.post("/discord", async (_req, res) => {
             },
           });
           break;
+        case 'add_words_user':
+          const username = message.data.values[0].split('_')[0];
+          const words = message.data.values[0].split('_')[1];
+          const day = message.data.values[0].split('_')[2];
+
+          fetch(`${getPath(_req)}/bot_add`, {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              token,
+              userId: user.id,
+              username,
+              words,
+              day
+            }),
+          });
+          break;
         case 'today':
           fetch(`${getPath(_req)}/bot_add`, {
             method: "post",
@@ -464,7 +491,7 @@ router.post("/discord", async (_req, res) => {
             },
             body: JSON.stringify({
               token,
-              username: user.username,
+              userId: user.id,
               words: options.words,
               comment: options.comment,
               day: 'today'
@@ -489,7 +516,7 @@ router.post("/discord", async (_req, res) => {
             },
             body: JSON.stringify({
               token,
-              username: user.username,
+              userId: user.id,
               words: options.words,
               comment: options.comment,
               day: 'yesterday'
@@ -548,7 +575,8 @@ router.post("/discord", async (_req, res) => {
             },
             body: JSON.stringify({
               token,
-              username: user.username,
+              userId: user.id,
+              username: options.name || user.username,
               target: options.target,
             }),
           });
@@ -558,8 +586,8 @@ router.post("/discord", async (_req, res) => {
           res.status(200).send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              flags: InteractionResponseFlags.EPHEMERAL,
-              content: `Начинаю добавлять пользователя`,
+              // flags: InteractionResponseFlags.EPHEMERAL,
+              content: `Пользователь <@${user.id}> регистрируется на пендель`,
             },
           });
           break;
