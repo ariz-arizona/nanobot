@@ -379,7 +379,6 @@ router.post("/discord", async (_req, res) => {
   ) {
     try {
       const command = message.data.name || message.data.custom_id;
-      console.log(`Получена команда ${command}`);
 
       const options = {};
       if (message.data.options) {
@@ -404,6 +403,8 @@ router.post("/discord", async (_req, res) => {
           throw new Error('too many words')
         }
       }
+      
+      console.log(`Получена команда ${command}\n${JSON.stringify(options)}`);
 
       const user = message.guild_id ? message.member.user : message.user;
 
