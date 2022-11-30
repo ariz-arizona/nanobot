@@ -39,7 +39,7 @@ const getFreeDates = async (userId) => {
     const res = await sheets.spreadsheets.get({
         spreadsheetId: SPREADSHEET_ID,
         includeGridData: true,
-        ranges: "A1:AF60",
+        ranges: "A1:AJ60",
     });
     const timezone = {
         timeZone: "Europe/Moscow",
