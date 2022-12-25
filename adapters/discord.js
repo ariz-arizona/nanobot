@@ -103,10 +103,13 @@ router.post("/bot_add", async (_req, res) => {
 
     for (let index = 0; index < freeDates.length; index++) {
       const buttons = [];
-      
-      const dates = freeDates[index].dates;
+
+      let dates = freeDates[index].dates;
       const name = freeDates[index].name;
-      // console.log({dates, name});
+
+      if (dates.length > 2) {
+        dates = dates.slice(0, 2);
+      }
       dates.map((el) => {
         el.value = [el.value, words].join("_");
         el.label = `${el.label} (${name})`
@@ -404,7 +407,7 @@ router.post("/discord", async (_req, res) => {
           throw new Error('too many words')
         }
       }
-      
+
       console.log(`Получена команда ${command}\n${JSON.stringify(options)}`);
 
       const user = message.guild_id ? message.member.user : message.user;
