@@ -102,6 +102,10 @@ const rows = {
   29: "AD",
   30: "AE",
   31: "AF",
+  32: "AG",
+  33: "AH",
+  34: "AI",
+  35: "AJ",
 };
 
 const getPreviousDay = (date = new Date()) => {

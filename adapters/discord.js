@@ -103,9 +103,10 @@ router.post("/bot_add", async (_req, res) => {
 
     for (let index = 0; index < freeDates.length; index++) {
       const buttons = [];
-
+      
       const dates = freeDates[index].dates;
       const name = freeDates[index].name;
+      // console.log({dates, name});
       dates.map((el) => {
         el.value = [el.value, words].join("_");
         el.label = `${el.label} (${name})`
