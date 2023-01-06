@@ -278,7 +278,7 @@ router.post("/bot_add_two", async (_req, res) => {
         resource: { values: [[words]] },
       });
 
-      const randomEmojiCount = getRandomInt(0, 8);
+      const randomEmojiCount = getRandomInt(1, 8);
       const randomEmoji = [];
       for (let index = 0; index < randomEmojiCount; index++) {
         randomEmoji.push(emoji[getRandomInt(0, emoji.length - 1)].char);
@@ -286,7 +286,7 @@ router.post("/bot_add_two", async (_req, res) => {
 
       const txt = [`Пользователь: **${username}**`, `День: ${date}`, `Слов: ${words}`];
       if (comment) txt.push(`Комментарий: *${comment}*`)
-      txt.push(`\nСлучайный эмоджи от бота: ${randomEmoji.join()}`);
+      txt.push(`\nСлучайный эмоджи от бота: ${randomEmoji.join(' ')}`);
 
       const checkReaction = '\u2705'; // check
       const reaction = getReaction(words);
