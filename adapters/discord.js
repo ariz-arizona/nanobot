@@ -90,7 +90,7 @@ router.post("/bot_add", async (_req, res) => {
     if (username) {
       freeDates = freeDates.filter(el => el.name === username);
     }
-
+    
     let currentHour = parseInt(new Date().toLocaleString("en-US", {
       timeZone: "Europe/Moscow",
       hour12: false,
@@ -106,9 +106,6 @@ router.post("/bot_add", async (_req, res) => {
       let dates = freeDates[index].dates;
       const name = freeDates[index].name;
 
-      if (dates.length > 2) {
-        dates = dates.slice(0, 2);
-      }
       dates.map((el) => {
         el.value = [el.value, words].join("_");
         el.label = `${el.label} (${name})`

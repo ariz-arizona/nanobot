@@ -44,10 +44,25 @@ const getFreeDates = async (userId) => {
     const timezone = {
         timeZone: "Europe/Moscow",
         hour12: false,
-        day: 'numeric'
+        day: 'numeric',
+        month: 'numeric'
     };
-    const currentDay = parseInt(new Date().toLocaleString("en-US", timezone));
-    const previousDay = parseInt(getPreviousDay().toLocaleString("en-US", timezone));
+    
+    const currentDayArr = new Date().toLocaleString("en-US", timezone).split('/');
+    const currentDay = {
+        month: parseInt(currentDayArr[0]),
+        day: parseInt(currentDayArr[1])
+    };
+
+    const previousDayArr = getPreviousDay().toLocaleString("en-US", timezone).split('/');
+    const previousDay = {
+        month: parseInt(previousDayArr[0]),
+        day: parseInt(previousDayArr[1])
+    };
+/*
+    const previousDay = { month: 1, day: 17 };
+    const currentDay = { month: 1, day: 18 };
+*/
     const data = res.data.sheets[0].data[0].rowData;
 
     const findUsernames = data.map((el, index) => {
@@ -64,17 +79,33 @@ const getFreeDates = async (userId) => {
         const freeDates = [];
         data[findIndex].values.map((el, i) => {
             const date = data[0].values[i].formattedValue;
-            const target = data[findIndex].values[i].formattedValue;
-            const condition = parseInt(date) === currentDay || parseInt(date) === previousDay;
+            const parsingValue = date.split('.');
+            const parsedDate = new Date(
+                parsingValue[2],
+                parseInt(parsingValue[1]) - 1,
+                parseInt(parsingValue[0]),
+                10
+            );
+            // console.log({ date, parsedDate });
+            const value = data[findIndex].values[i].formattedValue;
+            const condition = (
+                parsedDate.getDate() === currentDay.day
+                && (parsedDate.getMonth() + 1) === currentDay.month
+            ) || (
+                    parsedDate.getDate() === previousDay.day
+                    && (parsedDate.getMonth() + 1) === previousDay.month
+                );
+
             if (i > 0 && condition) {
-                // console.log({i, date, v: `${rows[i]}${findIndex + 1}`})
+                // console.log({ cell: `${rows[i]}${findIndex + 1}`, date });
                 freeDates.push({
                     value: [`${rows[i]}${findIndex + 1}`, date].join('_'),
-                    label: `${date}${target ? ` (сейчас слов ${target})` : ''}`,
+                    label: `${date}${value ? ` (сейчас слов ${value})` : ''}`,
                     style: parseInt(date) === currentDay ? 1 : 2
                 });
             }
         });
+        // console.log(freeDates)
         result.push({ name, dates: freeDates });
     })
 
