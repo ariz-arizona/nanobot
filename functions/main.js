@@ -47,7 +47,7 @@ const getFreeDates = async (userId) => {
         day: 'numeric',
         month: 'numeric'
     };
-    
+
     const currentDayArr = new Date().toLocaleString("en-US", timezone).split('/');
     const currentDay = {
         month: parseInt(currentDayArr[0]),
@@ -59,10 +59,10 @@ const getFreeDates = async (userId) => {
         month: parseInt(previousDayArr[0]),
         day: parseInt(previousDayArr[1])
     };
-/*
-    const previousDay = { month: 1, day: 17 };
-    const currentDay = { month: 1, day: 18 };
-*/
+    /*
+        const previousDay = { month: 1, day: 17 };
+        const currentDay = { month: 1, day: 18 };
+    */
     const data = res.data.sheets[0].data[0].rowData;
 
     const findUsernames = data.map((el, index) => {
@@ -73,20 +73,16 @@ const getFreeDates = async (userId) => {
         throw new Error(`user not found|${userId}`);
     }
 
+    const gSheetsBaseDate = new Date(1899, 11, 30, 10).getTime();
+
     const result = [];
     findUsernames.map(el => {
         const { index: findIndex, name } = el;
         const freeDates = [];
         data[findIndex].values.map((el, i) => {
             const date = data[0].values[i].formattedValue;
-            const parsingValue = date.split('.');
-            const parsedDate = new Date(
-                parsingValue[2],
-                parseInt(parsingValue[1]) - 1,
-                parseInt(parsingValue[0]),
-                10
-            );
-            // console.log({ date, parsedDate });
+            const effValue = data[0].values[i].effectiveValue.numberValue;
+            const parsedDate = new Date(gSheetsBaseDate + effValue * 24 * 60 * 60 * 1000);
             const value = data[findIndex].values[i].formattedValue;
             const condition = (
                 parsedDate.getDate() === currentDay.day
