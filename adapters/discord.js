@@ -15,8 +15,7 @@ const help = require('../data/help.json');
 
 const { DISCORD_APPLICATION_ID, DISCORD_PUB_KEY, DISCORD_TOKEN } = process.env;
 const { SPREADSHEET_ID, GOOGLE_API_KEY } = process.env;
-
-const PNDL_TARGET = 2800;
+const { PNDL_TARGET = 2000 } = process.env;
 
 const sendErrorToDiscord = async (error, token) => {
   console.log(error);
